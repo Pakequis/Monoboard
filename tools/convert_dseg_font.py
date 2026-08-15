@@ -1,0 +1,131 @@
+"""
+Converts a DSEG-family TTF into an Adafruit_GFX GFXfont bitmap header
+(the same format this project's other custom fonts use), via freetype-py.
+Mirrors the behavior of Adafruit's fontconvert.c closely enough to match
+its output layout, including per-glyph byte-alignment of the packed
+bitmap data -- getting this wrong silently shifts every glyph after the
+first affected one, which is exactly the bug the self-check at the end
+of convert() catches on every run.
+
+Usage:
+  python3 convert_dseg_font.py <path-to-ttf> <pixel-size> <output.h> <FontVariableName>
+
+Example (regenerating this project's clock font):
+  python3 convert_dseg_font.py DSEG7Classic-Bold.ttf 44 dseg7_classic_bold.h DSEG7_Classic_Bold_44
+
+Only covers the printable ASCII range 0x20-0x7E (0x20 = space, 0x7E = '~')
+-- this project's display strings are ASCII-only by convention.
+"""
+import sys
+import freetype
+
+
+def convert(ttf_path, pixel_size, first_char, last_char):
+    face = freetype.Face(ttf_path)
+    face.set_pixel_sizes(0, pixel_size)
+
+    bitmap_bytes = bytearray()
+    glyphs = []  # (offset, width, height, xAdvance, xOffset, yOffset, char)
+    bit_buffer = 0
+    bit_count = 0
+
+    def flush_byte():
+        nonlocal bit_buffer, bit_count
+        if bit_count > 0:
+            bitmap_bytes.append((bit_buffer << (8 - bit_count)) & 0xFF)
+            bit_buffer = 0
+            bit_count = 0
+
+    for code in range(first_char, last_char + 1):
+        flush_byte()  # each glyph starts on a fresh byte boundary
+        offset = len(bitmap_bytes)
+
+        face.load_char(chr(code), freetype.FT_LOAD_RENDER | freetype.FT_LOAD_TARGET_MONO)
+        bmp = face.glyph.bitmap
+        width, height = bmp.width, bmp.rows
+        x_advance = int(round(face.glyph.advance.x / 64.0))
+        x_offset = face.glyph.bitmap_left
+        y_offset = -face.glyph.bitmap_top
+
+        for row in range(height):
+            for col in range(width):
+                byte_idx = row * bmp.pitch + (col // 8)
+                bit_idx = 7 - (col % 8)
+                bit = (bmp.buffer[byte_idx] >> bit_idx) & 1
+                bit_buffer = (bit_buffer << 1) | bit
+                bit_count += 1
+                if bit_count == 8:
+                    bitmap_bytes.append(bit_buffer)
+                    bit_buffer = 0
+                    bit_count = 0
+
+        glyphs.append((offset, width, height, x_advance, x_offset, y_offset, chr(code)))
+
+    flush_byte()
+
+    # Self-check: recompute each glyph's expected byte offset independently
+    # and assert it matches what was recorded -- catches the per-glyph
+    # alignment bug mentioned above automatically, every run.
+    expected_offset = 0
+    for (offset, width, height, *_rest) in glyphs:
+        assert offset == expected_offset, f"offset mismatch: {offset} != {expected_offset}"
+        expected_offset += (width * height + 7) // 8
+    assert expected_offset == len(bitmap_bytes)
+
+    y_advance = int(round(face.size.height / 64.0))
+    return bitmap_bytes, glyphs, y_advance
+
+
+def escape_char_comment(ch):
+    if ch == "'":
+        return "'''"
+    if ch == '\\':
+        return "'\\\\'"
+    return f"'{ch}'"
+
+
+def write_header(out_path, name, bitmap_bytes, glyphs, y_advance, first_char, last_char, header_comment):
+    lines = [header_comment, "#pragma once", "", "#include <Adafruit_GFX.h>", ""]
+    lines.append(f"const uint8_t {name}Bitmaps[] PROGMEM = {{")
+    for i in range(0, len(bitmap_bytes), 12):
+        chunk = bitmap_bytes[i:i + 12]
+        lines.append("  " + ", ".join(f"0x{b:02X}" for b in chunk) + ("," if i + 12 < len(bitmap_bytes) else ""))
+    lines.append("};")
+    lines.append("")
+    lines.append(f"const GFXglyph {name}Glyphs[] PROGMEM = {{")
+    for i, (offset, width, height, x_advance, x_offset, y_offset, ch) in enumerate(glyphs):
+        prefix = "  " if i == 0 else "  , "
+        lines.append(
+            f"{prefix}{{ {offset:5d}, {width:3d}, {height:3d}, {x_advance:3d}, {x_offset:4d}, {y_offset:4d} }}"
+            f"  // {escape_char_comment(ch)}"
+        )
+    lines.append("};")
+    lines.append("")
+    lines.append(f"const GFXfont {name} PROGMEM = {{")
+    lines.append(f"  (uint8_t  *){name}Bitmaps, (GFXglyph *){name}Glyphs, 0x{first_char:02X}, 0x{last_char:02X}, {y_advance}")
+    lines.append("};")
+    lines.append("")
+    with open(out_path, "w") as f:
+        f.write("\n".join(lines))
+
+
+if __name__ == "__main__":
+    ttf_path, pixel_size, out_path, name = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4]
+    bitmap_bytes, glyphs, y_advance = convert(ttf_path, pixel_size, 0x20, 0x7E)
+    header_comment = f"""/*
+  {name} ({pixel_size}px digit height) - Adafruit GFX font
+  Font: DSEG, Copyright (c) 2020 keshikan (https://www.keshikan.net),
+  Reserved Font Name "DSEG". Licensed under the SIL Open Font License 1.1
+  -- see DSEG-LICENSE.txt in this folder for the full license text.
+
+  Generated by tools/convert_dseg_font.py from DSEG7Classic-Bold.ttf
+  (keshikan/DSEG release v0.46) via freetype-py.
+*/"""
+    write_header(out_path, name, bitmap_bytes, glyphs, y_advance, 0x20, 0x7E, header_comment)
+    hhmm = 0
+    for ch in "00:00":
+        for g in glyphs:
+            if g[6] == ch:
+                hhmm += g[3]
+                break
+    print(f"Wrote {out_path}: {len(glyphs)} glyphs, {len(bitmap_bytes)} bitmap bytes, yAdvance={y_advance}, '00:00' advance={hhmm}px")
