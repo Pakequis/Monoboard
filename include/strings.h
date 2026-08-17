@@ -49,6 +49,13 @@ static const char* const STR_MONTHS[] = {
 // ===== Local Sensors =====
 #define STR_LABEL_LIGHTNING     "Raios"
 
+// ===== Crypto/FX Panel =====
+// BTC/ETH are quoted in BRL, matching this language's own currency; the
+// third line is the USD/BRL rate itself (1 dollar's worth of reais).
+#define STR_CRYPTO_QUOTE_CURRENCY_IS_BRL 1
+#define STR_CRYPTO_CURRENCY_SYMBOL       "R$"
+#define STR_CRYPTO_FX_LABEL              "USD"
+
 #elif APP_LANGUAGE == LANG_EN
 
 // ===== Header Chrome =====
@@ -83,6 +90,15 @@ static const char* const STR_MONTHS[] = {
 
 // ===== Local Sensors =====
 #define STR_LABEL_LIGHTNING     "Strikes"
+
+// ===== Crypto/FX Panel =====
+// BTC/ETH are quoted in USD, matching this language's own currency; the
+// third line inverts to the BRL/USD rate (1 real's worth of dollars) --
+// "1 dollar in reais" would be meaningless once the base currency is
+// already the dollar.
+#define STR_CRYPTO_QUOTE_CURRENCY_IS_BRL 0
+#define STR_CRYPTO_CURRENCY_SYMBOL       "$"
+#define STR_CRYPTO_FX_LABEL              "BRL"
 
 #else
 #error "Unsupported APP_LANGUAGE value - must be LANG_PT_BR or LANG_EN"

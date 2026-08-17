@@ -97,6 +97,7 @@
 // ===== Content Feature Flags =====
 #define FEATURE_WEATHER_ENABLED 1
 #define FEATURE_NEWS_ENABLED    1
+#define FEATURE_CRYPTO_ENABLED  1
 
 // ===== Content Area Layout: 2x2 grid =====
 // Four quadrants (weather forecast grid, lightning distance box, and
@@ -215,18 +216,21 @@
 #define CALENDAR_WEEKDAY_LABEL_Y_OFFSET 13 // baseline y offset from CALENDAR_HEADER_HEIGHT, for the weekday letters
 #define CALENDAR_DAY_LABEL_Y_OFFSET     21 // baseline y offset from a week row's top, for the day number
 
-// ---- Bottom-right quadrant: clock box + reserved box ----
+// ---- Bottom-right quadrant: clock box + crypto/FX box ----
 // Two separate bordered boxes stacked with the usual CONTENT_BOX_MARGIN
 // gap between them (same pattern as every other quadrant boundary in
 // this grid), instead of one box holding both. Clock box on top, in
 // lib/dseg_fonts/dseg7_classic_bold.h's DSEG7_Classic_Bold_44. The box
-// below it is left empty (3 blank line-slots at NEWS_LINE_HEIGHT's
-// pitch, matching the news column alongside it) until a use is decided
-// for it. Quadrant sits directly under the calendar, same width (see
+// below it shows 3 plain text lines (BTC, ETH, FX rate -- see the Crypto/
+// FX Content Type section below), same left-aligned style as the news
+// column alongside it, no header bar (box is too short to spare the
+// height). Quadrant sits directly under the calendar, same width (see
 // CONTENT_MID_Y's comment above).
 #define CLOCK_LINE_Y_OFFSET  52  // baseline y offset from the clock box's own top, clock line: an 8px top margin, plus the DSEG7 font's own 44px ascender (top edge to baseline)
 #define CLOCK_BOX_BOTTOM_MARGIN 8  // px, gap below the clock's baseline to the clock box's own bottom edge -- mirrors CLOCK_LINE_Y_OFFSET's 8px top margin
 #define CLOCK_BOX_HEIGHT (CLOCK_LINE_Y_OFFSET + CLOCK_BOX_BOTTOM_MARGIN)  // px, clock-only box height: top margin + DSEG7 ascender + bottom margin
+#define CRYPTO_FIRST_LINE_Y_OFFSET 16  // baseline y offset from the crypto box's own top, for the BTC line -- matches WEATHER_SENSOR_LINE_Y_OFFSET's single-line pitch
+#define CRYPTO_LINE_HEIGHT         20  // baseline-to-baseline pitch between the BTC/ETH/FX lines -- matches NEWS_LINE_HEIGHT
 
 // ---- Bottom-left quadrant: news headlines ----
 // No header label (unlike weather/lightning/calendar above, though the
@@ -260,6 +264,7 @@
 // ===== Content Cache / History =====
 #define TEMP_HUMIDITY_TEXT_LEN      16  // fixed buffer size for the temp/humidity text (e.g. "22.5 C 45%")
 #define LIGHTNING_STATUS_TEXT_LEN   10  // fixed buffer size for the lightning status label (e.g. "40km", "--")
+#define CRYPTO_LINE_TEXT_LEN        20  // fixed buffer size per crypto/FX box line (e.g. "BTC R$304521", "BRL $0.19")
 
 // ===== Weather Forecast Content Type =====
 // Open-Meteo needs lat/long, not a city name -- WEATHER_CITY_LABEL is just a
@@ -299,5 +304,17 @@
 #define NEWS_TOTAL_HEADLINE_COUNT   (NEWS_HEADLINES_PER_BUFFER * NEWS_CAROUSEL_BUFFER_COUNT)  // fetched/cached per sync window
 #define NEWS_HEADLINE_LEN       96  // fixed buffer size per cleaned-up headline (pre pixel-width truncation, done at render time)
 #define NEWS_SOURCE_TAG         "[GN]" // language-independent abbreviation, not translated text
+
+// ===== Crypto/FX Content Type =====
+// CoinGecko's simple/price endpoint, no API key needed. One request
+// covers both coins and both currencies -- the USD/BRL exchange rate
+// shown alongside BTC/ETH isn't a separate fetch, it's derived from
+// these same four prices at render time (see crypto_client.h). Which
+// currency each price line displays in (BRL vs USD) follows APP_LANGUAGE
+// via strings.h's STR_CRYPTO_* macros, not a separate flag here.
+#define CRYPTO_API_URL           "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd,brl"
+#define CRYPTO_HTTP_TIMEOUT_MS   8000UL
+#define CRYPTO_BTC_LABEL         "BTC" // ticker symbol, language-independent like NEWS_SOURCE_TAG above
+#define CRYPTO_ETH_LABEL         "ETH"
 
 #endif // CONFIG_H

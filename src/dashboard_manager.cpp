@@ -53,12 +53,12 @@ void drawDashboard()
     // ===== Content area: 2x2 grid =====
     // Top row (left to right): weather forecast grid, lightning distance
     // box, calendar. Bottom row: news headlines (left, wider), clock +
-    // reserved box (right, directly under the calendar, same width --
+    // crypto/FX box (right, directly under the calendar, same width --
     // their shared left edge is derived from the calendar's own left
     // edge below instead of a hardcoded constant). No standalone divider
     // lines anywhere in the grid (see config.h's "Content Area Layout"
     // section) -- every quadrant is its own bordered box (except the
-    // bottom-right one, split into a clock box and a reserved box), with a
+    // bottom-right one, split into a clock box and a crypto/FX box), with a
     // CONTENT_BOX_MARGIN gap (both axes) providing the visual
     // separation from its neighbors.
 
@@ -81,7 +81,7 @@ void drawDashboard()
     // the calendar, same width.
     int16_t calX0 = display.width() - DISPLAY_FRAME_MARGIN - CONTENT_BOX_MARGIN - CALENDAR_WIDTH;
 
-    // Bottom row: news box (left) and clock+reserved boxes (right), same
+    // Bottom row: news box (left) and clock+crypto/FX boxes (right), same
     // margin-from-CONTENT_MID_Y treatment the top row already gets from
     // HEADER_SEPARATOR_Y -- both rows are now fully composed of
     // independent bordered boxes with a CONTENT_BOX_MARGIN gap between
@@ -94,8 +94,8 @@ void drawDashboard()
     // from the wider general-purpose content margin used on the left/
     // right edges.
     int16_t bottomRowY1 = display.height() - DISPLAY_BORDER_OFFSET - CONTENT_BOX_MARGIN;
-    int16_t reservedBoxX0 = calX0;
-    int16_t newsBoxX1 = reservedBoxX0 - CONTENT_BOX_MARGIN;
+    int16_t cryptoBoxX0 = calX0;
+    int16_t newsBoxX1 = cryptoBoxX0 - CONTENT_BOX_MARGIN;
 
     // ---- Top row, box 3 (rightmost): calendar ----
     // Right-anchored -- see config.h's comment on CALENDAR_WIDTH's box for why.
@@ -392,19 +392,31 @@ void drawDashboard()
       }
     }
 
-    // ---- Bottom-right: clock box (top) + reserved box (below, left
-    // empty until a use is decided for it), directly under the calendar,
-    // same width -- two separate boxes stacked with the usual
-    // CONTENT_BOX_MARGIN gap, not one shared box. ----
+    // ---- Bottom-right: clock box (top) + crypto/FX box (below, BTC/ETH/
+    // USD-BRL quotes -- see content_manager.h's getCrypto*Text()),
+    // directly under the calendar, same width -- two separate boxes
+    // stacked with the usual CONTENT_BOX_MARGIN gap, not one shared box. ----
     int16_t clockBoxY0 = bottomRowY0;
-    drawRect(reservedBoxX0, clockBoxY0, CALENDAR_WIDTH, CLOCK_BOX_HEIGHT, GxEPD_BLACK);
+    drawRect(cryptoBoxX0, clockBoxY0, CALENDAR_WIDTH, CLOCK_BOX_HEIGHT, GxEPD_BLACK);
 
-    int16_t reservedBoxY0 = clockBoxY0 + CLOCK_BOX_HEIGHT + CONTENT_BOX_MARGIN;
-    drawRect(reservedBoxX0, reservedBoxY0, CALENDAR_WIDTH, bottomRowY1 - reservedBoxY0, GxEPD_BLACK);
+    int16_t cryptoBoxY0 = clockBoxY0 + CLOCK_BOX_HEIGHT + CONTENT_BOX_MARGIN;
+    drawRect(cryptoBoxX0, cryptoBoxY0, CALENDAR_WIDTH, bottomRowY1 - cryptoBoxY0, GxEPD_BLACK);
 
     char timeBuf[6];
     getTimeString(timeBuf, sizeof(timeBuf));
-    writeTextCenteredInBox(reservedBoxX0, CALENDAR_WIDTH, clockBoxY0 + CLOCK_LINE_Y_OFFSET, timeBuf,
+    writeTextCenteredInBox(cryptoBoxX0, CALENDAR_WIDTH, clockBoxY0 + CLOCK_LINE_Y_OFFSET, timeBuf,
                            &DSEG7_Classic_Bold_44, GxEPD_BLACK);
+
+    int16_t cryptoX = cryptoBoxX0 + CONTENT_TEXT_X_OFFSET;
+    char cryptoLine[CRYPTO_LINE_TEXT_LEN];
+
+    getCryptoBitcoinText(cryptoLine, sizeof(cryptoLine));
+    writeText(cryptoX, cryptoBoxY0 + CRYPTO_FIRST_LINE_Y_OFFSET, cryptoLine, &FreeMonoBold9pt7b, GxEPD_BLACK);
+
+    getCryptoEthereumText(cryptoLine, sizeof(cryptoLine));
+    writeText(cryptoX, cryptoBoxY0 + CRYPTO_FIRST_LINE_Y_OFFSET + CRYPTO_LINE_HEIGHT, cryptoLine, &FreeMonoBold9pt7b, GxEPD_BLACK);
+
+    getCryptoFxText(cryptoLine, sizeof(cryptoLine));
+    writeText(cryptoX, cryptoBoxY0 + CRYPTO_FIRST_LINE_Y_OFFSET + 2 * CRYPTO_LINE_HEIGHT, cryptoLine, &FreeMonoBold9pt7b, GxEPD_BLACK);
   });
 }

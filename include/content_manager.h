@@ -48,4 +48,21 @@ void getWeatherForecastHourLabel(size_t hourIndex, char* outLabel, size_t outLab
 // the forecast hasn't been correctly fetched, fills a placeholder instead.
 void getWeatherForecastTemperatureNumberLabel(size_t hourIndex, char* outLabel, size_t outLabelSize);
 
+// Fills outText with the Bitcoin price line, quoted in whichever currency
+// matches APP_LANGUAGE (see strings.h's STR_CRYPTO_* macros): e.g.
+// "BTC R$304521" in Portuguese, "BTC $60521" in English. Uses the cache
+// from the last successful fetchNetworkContent() sync; if that fetch
+// failed or hasn't happened yet, fills a placeholder instead.
+void getCryptoBitcoinText(char* outText, size_t outTextSize);
+
+// Same as getCryptoBitcoinText(), for Ethereum.
+void getCryptoEthereumText(char* outText, size_t outTextSize);
+
+// Fills outText with the USD/BRL exchange rate line, derived from the
+// cached BTC prices in both currencies (see crypto_client.h) rather than
+// a separate fetch: "USD R$5.23" (1 dollar in reais) in Portuguese, or
+// "BRL $0.19" (1 real in dollars) in English. Same placeholder fallback
+// as getCryptoBitcoinText().
+void getCryptoFxText(char* outText, size_t outTextSize);
+
 #endif // CONTENT_MANAGER_H

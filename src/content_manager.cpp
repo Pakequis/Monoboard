@@ -3,6 +3,7 @@
 #include "debug.h"
 #include "weather_client.h"
 #include "news_client.h"
+#include "crypto_client.h"
 #include "time_manager.h"
 #include "strings.h"
 #include "weather_icon_map.h"
@@ -22,8 +23,17 @@ struct NewsCache {
   bool valid;
 };
 
+struct CryptoCache {
+  float btcUsd;
+  float btcBrl;
+  float ethUsd;
+  float ethBrl;
+  bool valid;
+};
+
 static RTC_DATA_ATTR WeatherForecastCache weatherForecastCache = { {0}, {0.0f}, {0}, {{0}}, false };
 static RTC_DATA_ATTR NewsCache newsCache = { {{0}}, false };
+static RTC_DATA_ATTR CryptoCache cryptoCache = { 0.0f, 0.0f, 0.0f, 0.0f, false };
 // Which of the NEWS_CAROUSEL_BUFFER_COUNT buffers is currently on screen.
 // Advances once per wake (advanceNewsCarousel()), independent of sync
 // windows -- see config.h's news-carousel comment for the full picture.
@@ -80,6 +90,28 @@ void fetchNetworkContent()
     DEBUG_PRINTLN("fetchNetworkContent: news headlines fetch failed, clearing cache");
   }
 #endif
+
+#if FEATURE_CRYPTO_ENABLED
+  if (fetchCryptoRates(&cryptoCache.btcUsd, &cryptoCache.btcBrl, &cryptoCache.ethUsd, &cryptoCache.ethBrl))
+  {
+    cryptoCache.valid = true;
+    DEBUG_PRINT("fetchNetworkContent: crypto rates updated -> BTC $");
+    DEBUG_PRINT(cryptoCache.btcUsd);
+    DEBUG_PRINT(" / R$");
+    DEBUG_PRINT(cryptoCache.btcBrl);
+    DEBUG_PRINT(", ETH $");
+    DEBUG_PRINT(cryptoCache.ethUsd);
+    DEBUG_PRINT(" / R$");
+    DEBUG_PRINTLN(cryptoCache.ethBrl);
+  }
+  else
+  {
+    // Same reliability rule as the weather forecast/news above: never show
+    // stale or partially-fetched prices.
+    cryptoCache.valid = false;
+    DEBUG_PRINTLN("fetchNetworkContent: crypto rates fetch failed, clearing cache");
+  }
+#endif
 }
 
 char getWeatherForecastIconChar(size_t hourIndex)
@@ -131,4 +163,50 @@ bool getNewsHeadline(size_t index, char* outText, size_t outTextSize)
   size_t realIndex = newsCarouselIndex * NEWS_HEADLINES_PER_BUFFER + index;
   snprintf(outText, outTextSize, "%s", newsCache.headlines[realIndex]);
   return true;
+}
+
+void getCryptoBitcoinText(char* outText, size_t outTextSize)
+{
+  if (!cryptoCache.valid)
+  {
+    snprintf(outText, outTextSize, "%s %s", CRYPTO_BTC_LABEL, STR_VALUE_PLACEHOLDER);
+    return;
+  }
+#if STR_CRYPTO_QUOTE_CURRENCY_IS_BRL
+  snprintf(outText, outTextSize, "%s %s%.0f", CRYPTO_BTC_LABEL, STR_CRYPTO_CURRENCY_SYMBOL, cryptoCache.btcBrl);
+#else
+  snprintf(outText, outTextSize, "%s %s%.0f", CRYPTO_BTC_LABEL, STR_CRYPTO_CURRENCY_SYMBOL, cryptoCache.btcUsd);
+#endif
+}
+
+void getCryptoEthereumText(char* outText, size_t outTextSize)
+{
+  if (!cryptoCache.valid)
+  {
+    snprintf(outText, outTextSize, "%s %s", CRYPTO_ETH_LABEL, STR_VALUE_PLACEHOLDER);
+    return;
+  }
+#if STR_CRYPTO_QUOTE_CURRENCY_IS_BRL
+  snprintf(outText, outTextSize, "%s %s%.0f", CRYPTO_ETH_LABEL, STR_CRYPTO_CURRENCY_SYMBOL, cryptoCache.ethBrl);
+#else
+  snprintf(outText, outTextSize, "%s %s%.0f", CRYPTO_ETH_LABEL, STR_CRYPTO_CURRENCY_SYMBOL, cryptoCache.ethUsd);
+#endif
+}
+
+void getCryptoFxText(char* outText, size_t outTextSize)
+{
+  // Derived from the same two BTC prices rather than a separate fetch --
+  // either coin's BRL price divided by its own USD price is the USD/BRL
+  // rate, since both express that coin's value in each currency.
+  if (!cryptoCache.valid || cryptoCache.btcUsd <= 0.0f || cryptoCache.btcBrl <= 0.0f)
+  {
+    snprintf(outText, outTextSize, "%s %s", STR_CRYPTO_FX_LABEL, STR_VALUE_PLACEHOLDER);
+    return;
+  }
+#if STR_CRYPTO_QUOTE_CURRENCY_IS_BRL
+  float rate = cryptoCache.btcBrl / cryptoCache.btcUsd; // reais per dollar
+#else
+  float rate = cryptoCache.btcUsd / cryptoCache.btcBrl; // dollars per real
+#endif
+  snprintf(outText, outTextSize, "%s %s%.2f", STR_CRYPTO_FX_LABEL, STR_CRYPTO_CURRENCY_SYMBOL, rate);
 }
