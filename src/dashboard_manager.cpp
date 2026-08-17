@@ -250,12 +250,17 @@ void drawDashboard()
       for (int col = 1; col < 7; col++)
       {
         int16_t lineX = calX0 + (int16_t)(calColWidth * col);
-        drawLine(lineX, weekdayRowTop, lineX, calY0 + calHeight, GxEPD_BLACK);
+        // -1: drawRect()'s own border sits at calY0+calHeight-1 (width/height
+        // are pixel counts, not an endpoint coordinate); matching that exactly
+        // keeps this divider from overshooting 1px past the bottom border.
+        drawLine(lineX, weekdayRowTop, lineX, calY0 + calHeight - 1, GxEPD_BLACK);
       }
       for (int row = 0; row <= CALENDAR_WEEK_ROWS; row++)
       {
         int16_t lineY = weeksTop + (int16_t)(rowHeight * row);
-        drawLine(calX0, lineY, calX0 + CALENDAR_WIDTH, lineY, GxEPD_BLACK);
+        // -1: same reasoning as the vertical dividers above, but against the
+        // box's right border (calX0+CALENDAR_WIDTH-1) instead of its bottom.
+        drawLine(calX0, lineY, calX0 + CALENDAR_WIDTH - 1, lineY, GxEPD_BLACK);
       }
 
       for (int dayNum = 1; dayNum <= daysInMonth; dayNum++)
@@ -282,7 +287,13 @@ void drawDashboard()
           dayColor = GxEPD_WHITE;
         }
         int16_t dw = getTextWidth(dayBuf, &FreeMonoBold9pt7b);
-        writeText(colCx - dw / 2, rowTop + CALENDAR_DAY_LABEL_Y_OFFSET, dayBuf, &FreeMonoBold9pt7b, dayColor);
+        // Last column only: nudge 1px left. writeText()'s cursor-based
+        // centering doesn't account for the font glyph's left-side bearing,
+        // so the ink drifts slightly right of center in every column -- the
+        // inner columns have a grid line to absorb that, but the last one
+        // sits flush against the box's own right border with no slack.
+        int16_t dayTextX = colCx - dw / 2 - (col == 6 ? 1 : 0);
+        writeText(dayTextX, rowTop + CALENDAR_DAY_LABEL_Y_OFFSET, dayBuf, &FreeMonoBold9pt7b, dayColor);
       }
     }
 
