@@ -221,10 +221,12 @@
 #define LIGHTNING_RATE_WINDOW_SEC   3600UL
 // Cap on strike timestamps kept for the rate window. If more than this
 // many strikes land within one window, the oldest ones are evicted and
-// the reported rate undercounts -- accepted trade-off for a fixed-size
-// RTC_DATA_ATTR buffer; 40/h is already an intense storm for a single
-// AS3935 sensor.
-#define LIGHTNING_RATE_MAX_SAMPLES  40
+// the reported rate undercounts. Raised from 40 after a real storm
+// pinned the header at "40/h" for a sustained stretch -- clearly
+// undercounting. Still well under 1KB of RTC_DATA_ATTR memory at one
+// time_t per slot; the hard ceiling is 255 since strikeRateIndex /
+// strikeRateValidCount are uint8_t.
+#define LIGHTNING_RATE_MAX_SAMPLES  120
 
 // ---- Top row, box 3 (rightmost): calendar ----
 // Right-anchored (unlike before, when it was left-anchored right after
