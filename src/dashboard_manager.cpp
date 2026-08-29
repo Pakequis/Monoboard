@@ -146,15 +146,15 @@ void drawDashboard()
 
     // Adaptive ruler range. Normal mode: rings at 10/20/30/40 km. Close
     // mode (every strike currently in history is within
-    // LIGHTNING_CLOSE_KM_THRESHOLD): rings at the AS3935's own near
-    // distance-table entries 5/6/8/10 km, so a close storm's strikes
-    // spread across the box and each lands exactly on a ring the sensor
-    // can actually report -- and every label stays a whole number. A
-    // single strike beyond LIGHTNING_CLOSE_KM_THRESHOLD (kept in history
-    // until STRIKE_RESET_TIMEOUT_SEC of silence) snaps the ruler back to
-    // normal.
+    // LIGHTNING_CLOSE_KM_THRESHOLD): rings at 4/6/8/10 km -- spaced to
+    // spread a close storm's strikes across the box, with 6/8/10 on real
+    // AS3935 distance-table entries and every label a whole number. Each
+    // ring's radius is proportional to its km value (ringKm/scaleMaxKm of
+    // the box radius). A single strike beyond LIGHTNING_CLOSE_KM_THRESHOLD
+    // (kept in history until STRIKE_RESET_TIMEOUT_SEC of silence) snaps
+    // the ruler back to normal.
     static const uint8_t LIGHTNING_RING_KM_WIDE[LIGHTNING_RING_COUNT]  = {10, 20, 30, LIGHTNING_MAX_KM};
-    static const uint8_t LIGHTNING_RING_KM_CLOSE[LIGHTNING_RING_COUNT] = {5, 6, 8, LIGHTNING_CLOSE_KM_THRESHOLD};
+    static const uint8_t LIGHTNING_RING_KM_CLOSE[LIGHTNING_RING_COUNT] = {4, 6, 8, LIGHTNING_CLOSE_KM_THRESHOLD};
 
     uint8_t strikeCount = getStrikeHistoryCount();
     bool lightningCloseScale = (strikeCount > 0);

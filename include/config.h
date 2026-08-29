@@ -144,9 +144,9 @@
 // Distance scale: 4 dashed rings, adaptive range (see
 // dashboard_manager.cpp). Normal mode: rings at 10/20/30/40 km. Close
 // mode (every strike in history within LIGHTNING_CLOSE_KM_THRESHOLD):
-// rings at the AS3935's own near distance-table entries 5/6/8/10 km, so
-// a close storm's strikes spread across the box and each lands exactly
-// on a ring the sensor can report. A single strike beyond
+// rings at 4/6/8/10 km, spaced to spread a close storm's strikes across
+// the box (6/8/10 are real AS3935 distance-table entries), each ring's
+// radius proportional to its km value. A single strike beyond
 // LIGHTNING_CLOSE_KM_THRESHOLD snaps the ruler back to normal. Confirmed
 // strikes overlay as solid, thick rings at their real distance -- or a
 // filled center disc for an "overhead" reading (see LIGHTNING_OVERHEAD_KM).
