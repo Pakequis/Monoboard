@@ -51,17 +51,16 @@ static const uint8_t PIN_MOSI = 11;
 └─────────────────────┘       └──────────────────────┘
 ```
 
-## Local sensors & manual refresh button
+## Local sensors
 
 | Module          | GPIO | Function                     | Notes |
 |-----------------|------|-------------------------------|-------|
-| Refresh button  | 1    | `ext0` deep-sleep wake input  | Button to GND when pressed; internal pull-up enabled in software (`refresh_button.cpp`). Wakes on LOW. |
 | DHT22           | 2    | Data (1-wire)                 | Needs a ~10kΩ pull-up to 3.3V — many breakout modules already include this on-board; check before wiring a bare sensor. |
 | AS3935 breakout | 6    | IRQ, `ext1` deep-sleep wake   | The board wakes directly on this pin the instant the chip signals an event (`armAs3935IrqWakeup()`/`isWakeFromAs3935Irq()` in `as3935_lightning.cpp`), instead of only catching strikes on the next timer-driven poll. |
 | AS3935 breakout | 8    | I2C SDA (module's `MOSI` pin) | Shared I2C bus, default ESP32-S3 Arduino core pin. |
 | AS3935 breakout | 9    | I2C SCL                       | Shared I2C bus, default ESP32-S3 Arduino core pin. |
 
-All five pins avoid the display's GPIO 4/10/11/12/16/17, the native-USB
+All four pins avoid the display's GPIO 4/10/11/12/16/17, the native-USB
 GPIO 19/20, and the strapping pins GPIO 0/3/45/46.
 
 ### AS3935 breakout: full pinout (fixed logic-level straps)

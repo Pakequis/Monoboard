@@ -36,7 +36,6 @@ The `display` variable is global and can be accessed from any file that includes
 #include "dashboard_manager.h"
 #include "content_manager.h"
 #include "local_sensors.h"
-#include "refresh_button.h"
 #include "as3935_lightning.h"
 
 void setup()
@@ -57,7 +56,6 @@ void setup()
     }
     else
     {
-      armRefreshButtonWakeup();
       armAs3935IrqWakeup();
       esp_sleep_enable_timer_wakeup(DEEP_SLEEP_INTERVAL_SEC * 1000000ULL);
       esp_deep_sleep_start();
@@ -66,7 +64,7 @@ void setup()
   }
   else
   {
-    resetStrongStrikeRedrawLatch();                 // Normal-cadence wake (timer/button) also re-arms the latch
+    resetStrongStrikeRedrawLatch();                 // Normal-cadence wake (timer) also re-arms the latch
   }
 
   initDisplay();                                    // 1. Initialize display
@@ -74,7 +72,7 @@ void setup()
 
   applyTimezone();                                  // 2. Re-apply TZ/SNTP config (cheap, no WiFi needed)
 
-  bool syncDue = isTimeSyncDue() || isWakeFromButton();  // timer-due OR forced by the manual-refresh button
+  bool syncDue = isTimeSyncDue();
   if (syncDue)                                       //    Only bring up WiFi when a sync is actually due
   {
     if (wifiConnect())
@@ -92,7 +90,6 @@ void setup()
   clearLightningAlert();                            //    One-shot alert icon consumed by this redraw
   sleepDisplay();                                   // 4. Power off display
 
-  armRefreshButtonWakeup();                         //    ext0 wake source
   armAs3935IrqWakeup();                             //    ext1 wake source, in addition to the timer
   esp_sleep_enable_timer_wakeup(DEEP_SLEEP_INTERVAL_SEC * 1000000ULL);
   esp_deep_sleep_start();                            // 5. Deep sleep
@@ -111,7 +108,6 @@ This mirrors the actual control flow in `src/main.cpp` (debug logging and the re
 | `content_manager.h/.cpp` | RTC-memory caches for internet content: the 6-card weather forecast (code + temperature + `HHh` hour label per interval) and a 9-headline news carousel (3 buffers of 3, one buffer shown per screen redraw). `fetchNetworkContent()`, `getWeatherForecastIconChar()`/`getWeatherForecastHourLabel()`/`getWeatherForecastTemperatureNumberLabel()`, `advanceNewsCarousel()`, `getNewsHeadline()`. |
 | `lib/news_client` | `fetchTopHeadlines()` -- fetches the Google News RSS feed (`NEWS_API_URL`, locale-aware via `strings.h`) and streams it through a small tag-matching state machine (no full-body buffering, the feed runs well over 100KB) to pull out just the `<title>` of each `<item>`, cleaned up (source suffix stripped, HTML entities decoded, accents/smart punctuation transliterated to ASCII) for the display font. |
 | `local_sensors.h/.cpp` | `initLocalSensors()` once at boot, `readLocalSensors()` every wake (no network) + `getTempHumidityText()` for the DHT22 reading. AS3935 lightning: `handleLightningIrqWake()`/`onConfirmedLightningStrike()` record confirmed strikes (km + energy) into a ring buffer (`getStrikeHistoryCount()`/`getStrikeHistoryEntry()`, up to `STRIKE_HISTORY_COUNT`, cleared after `STRIKE_RESET_TIMEOUT_SEC` of silence) and a separate trailing-window buffer for `getLightningRateText()` (strikes in the last `LIGHTNING_RATE_WINDOW_SEC`, shown in the header). A strike above `LIGHTNING_ENERGY_HIGH_THRESHOLD` and within `LIGHTNING_CLOSE_KM_THRESHOLD` also sets the alert-icon flag (`isLightningAlertActive()`/`clearLightningAlert()`) and, on an IRQ wake where a redraw wasn't otherwise due, forces one early redraw -- `shouldForceEarlyRedraw()`/`resetStrongStrikeRedrawLatch()` latch this to at most one forced redraw per burst, re-armed on the next normal-cadence redraw. Each field independently shows a placeholder if its sensor isn't connected or the clock hasn't synced. |
-| `refresh_button.h/.cpp` | `isWakeFromButton()` (was this wake caused by the manual-refresh button?) + `armRefreshButtonWakeup()` (re-arm the `ext0` wake source on `PIN_REFRESH_BUTTON` before every deep sleep). |
 | `debug.h` | `DEBUG_BEGIN`/`DEBUG_PRINT`/`DEBUG_PRINTLN` macros, gated by `APP_DEBUG_SERIAL` in `config.h` — expand to real `Serial.*` calls or nothing at all, compiled out entirely when off. |
 | `strings.h` | `STR_*` display-string keys, switched between PT-BR/EN at compile time via `APP_LANGUAGE`. Both language blocks must define the same set of keys. |
 | `lib/weather_client` | Fetches weather code + temperature + `is_day` (Open-Meteo) for the next `WEATHER_FORECAST_HOURS` complete hours shown in the forecast box, plus each interval's local `HHh` hour label. The interval currently in progress is excluded, so `WEATHER_API_URL` requests one extra interval (`forecast_hours=7`) to back the 6 displayed cards. `is_day` picks the day/night icon variant. |
@@ -439,7 +435,7 @@ pio test -e native
 
 ## Deep sleep
 
-After `sleepDisplay()`, call `esp_deep_sleep_start()` to put the ESP32 into the lowest possible power mode (~5–10 µA). The chip wakes on three sources: a timer (`esp_sleep_enable_timer_wakeup(DEEP_SLEEP_INTERVAL_SEC * 1000000ULL)`), an `ext0` GPIO wake on `PIN_REFRESH_BUTTON` (`armRefreshButtonWakeup()`, from `refresh_button.h`), and an `ext1` GPIO wake on the AS3935's IRQ pin (`armAs3935IrqWakeup()`, from `as3935_lightning.h`) — all three must be (re-)armed every cycle, since deep sleep resets peripheral configuration. `main.cpp` calls all three right before `esp_deep_sleep_start()`. Every wake source runs `setup()` again from scratch (a full reboot; only `RTC_DATA_ATTR` variables and the RTC-backed clock survive). `isWakeFromButton()` tells `main.cpp` whether this particular wake was the button (forcing a sync window outside the normal schedule); `isWakeFromAs3935Irq()` tells it whether this wake was a lightning-sensor interrupt, which takes a short-circuit path (record the strike, skip the display/WiFi entirely unless a redraw is separately overdue). The reset button still works too, but it isn't a designed wake path.
+After `sleepDisplay()`, call `esp_deep_sleep_start()` to put the ESP32 into the lowest possible power mode (~5–10 µA). The chip wakes on two sources: a timer (`esp_sleep_enable_timer_wakeup(DEEP_SLEEP_INTERVAL_SEC * 1000000ULL)`), and an `ext1` GPIO wake on the AS3935's IRQ pin (`armAs3935IrqWakeup()`, from `as3935_lightning.h`) — both must be (re-)armed every cycle, since deep sleep resets peripheral configuration. `main.cpp` calls both right before `esp_deep_sleep_start()`. Every wake source runs `setup()` again from scratch (a full reboot; only `RTC_DATA_ATTR` variables and the RTC-backed clock survive). `isWakeFromAs3935Irq()` tells `main.cpp` whether this wake was a lightning-sensor interrupt, which takes a short-circuit path (record the strike, skip the display/WiFi entirely unless a redraw is separately overdue). The reset button still works too, but it isn't a designed wake path.
 
 ```cpp
 esp_sleep_enable_timer_wakeup(DEEP_SLEEP_INTERVAL_SEC * 1000000ULL);

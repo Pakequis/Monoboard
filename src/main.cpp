@@ -11,13 +11,11 @@
 #include "dashboard_manager.h"
 #include "content_manager.h"
 #include "local_sensors.h"
-#include "refresh_button.h"
 #include "as3935_lightning.h"
 #include <time.h>
 
 static void goToSleep()
 {
-  armRefreshButtonWakeup();
   armAs3935IrqWakeup();
   esp_sleep_enable_timer_wakeup(DEEP_SLEEP_INTERVAL_SEC * 1000000ULL);
   DEBUG_PRINTLN("Entering deep sleep...");
@@ -42,6 +40,8 @@ static bool isRedrawDue()
 
 void setup()
 {
+  uint32_t wakeStartMs = millis();
+
   DEBUG_BEGIN(SERIAL_BAUD_RATE);
   DEBUG_PRINTLN();
   DEBUG_PRINTLN("========================================");
@@ -71,8 +71,8 @@ void setup()
   }
   else
   {
-    // Normal-cadence wake (timer or refresh button) -- re-arms the
-    // forced-early-redraw latch above for the next strong-nearby burst.
+    // Normal-cadence wake (timer) -- re-arms the forced-early-redraw
+    // latch above for the next strong-nearby burst.
     resetStrongStrikeRedrawLatch();
   }
 
@@ -84,12 +84,12 @@ void setup()
   // but WiFi only needs to come up when a sync is actually due.
   applyTimezone();
 
-  bool forcedByButton = isWakeFromButton();
-  bool syncDue = isTimeSyncDue() || forcedByButton;
+  bool syncDue = isTimeSyncDue();
 
   if (syncDue)
   {
-    DEBUG_PRINTLN(forcedByButton ? "Sync forced by button - connecting WiFi..." : "Sync due - connecting WiFi...");
+    uint32_t wifiStartMs = millis();
+    DEBUG_PRINTLN("Sync due - connecting WiFi...");
     if (wifiConnect())
     {
       DEBUG_PRINTLN("WiFi connected, syncing NTP...");
@@ -105,6 +105,8 @@ void setup()
     {
       DEBUG_PRINTLN("WiFi connection failed - using cached data");
     }
+    DEBUG_PRINT("[TIMING] WiFi phase (ms): ");
+    DEBUG_PRINTLN(millis() - wifiStartMs);
   }
   else
   {
@@ -118,14 +120,20 @@ void setup()
   advanceNewsCarousel();
 
   // Draw dashboard
+  uint32_t drawStartMs = millis();
   DEBUG_PRINTLN("Drawing dashboard...");
   drawDashboard();
   lastDrawEpoch = time(nullptr);
   clearLightningAlert();
+  DEBUG_PRINT("[TIMING] Draw phase (ms): ");
+  DEBUG_PRINTLN(millis() - drawStartMs);
 
   // Power off display
   DEBUG_PRINTLN("Putting display to sleep...");
   sleepDisplay();
+
+  DEBUG_PRINT("[TIMING] Total active time this wake (ms): ");
+  DEBUG_PRINTLN(millis() - wakeStartMs);
 
   DEBUG_PRINTLN("Setup complete - entering deep sleep shortly...");
   DEBUG_FLUSH();

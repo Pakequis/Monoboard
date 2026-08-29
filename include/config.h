@@ -70,11 +70,10 @@
 // ===== Firmware =====
 #define FIRMWARE_VERSION "v1.0.0"
 
-// ===== Local Sensor & Button Pins =====
+// ===== Local Sensor Pins =====
 // Avoid GPIO 4/10/11/12/16/17 (committed to the e-paper display wiring),
 // GPIO 19/20 (native USB), and GPIO 0/3/45/46 (strapping pins). All
 // assignments below stay clear of those.
-#define PIN_REFRESH_BUTTON  1   // ext0 deep-sleep wakeup source, RTC-capable
 #define PIN_DHT22_DATA      2   // digital, needs a pull-up (external or on-board)
 #define PIN_AS3935_IRQ      6   // deep-sleep wake source (ext1, as3935_lightning.cpp)
                                 // -- the ESP32 wakes the instant the chip
