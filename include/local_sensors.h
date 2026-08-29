@@ -61,31 +61,30 @@ void onConfirmedLightningStrike(int km, uint32_t energy);
 void handleLightningIrqWake();
 
 // Returns true (once) if the strike just recorded by this same boot's
-// onConfirmedLightningStrike() call was both strong (energy above
-// LIGHTNING_ENERGY_HIGH_THRESHOLD) and close (distance below
-// LIGHTNING_CLOSE_KM_THRESHOLD), AND no other strong-nearby strike has
+// onConfirmedLightningStrike() call was close (distance at or within
+// LIGHTNING_ALERT_KM, energy irrelevant), AND no other close strike has
 // already consumed this latch since the last normal-cadence redraw.
 // Marks the latch used as a side effect of returning true, so a burst of
-// several strong-nearby strikes only forces one early redraw -- the rest
-// just update the alert flag/history and wait for the next redraw,
-// whichever triggers it. Call resetStrongStrikeRedrawLatch() whenever a
-// redraw happens through the normal cadence instead, to re-arm it.
+// several close strikes only forces one early redraw -- the rest just
+// update the alert flag/history and wait for the next redraw, whichever
+// triggers it. Call resetCloseStrikeRedrawLatch() whenever a redraw
+// happens through the normal cadence instead, to re-arm it.
 bool shouldForceEarlyRedraw();
 
 // Re-arms the early-redraw latch (see shouldForceEarlyRedraw() above).
 // Call this whenever a redraw is about to happen through the normal
-// cadence (a genuine timer/button wake, or an IRQ wake where a redraw
-// was already due anyway) rather than the forced-early exception.
-void resetStrongStrikeRedrawLatch();
+// cadence (a genuine timer wake, or an IRQ wake where a redraw was
+// already due anyway) rather than the forced-early exception.
+void resetCloseStrikeRedrawLatch();
 
-// Returns whether a strong-nearby strike (see shouldForceEarlyRedraw())
-// has been recorded since the last time the dashboard was drawn --
-// drives the lightning-bolt alert icon in the lightning box header.
+// Returns whether a close strike (see shouldForceEarlyRedraw()) has been
+// recorded since the last time the dashboard was drawn -- drives the
+// lightning-bolt alert icon in the lightning box header.
 bool isLightningAlertActive();
 
 // Clears the alert-icon flag above. Called once after each dashboard
 // redraw so the icon shows for exactly that one redraw, unless a new
-// strong-nearby strike reactivates it before the next one.
+// close strike reactivates it before the next one.
 void clearLightningAlert();
 
 #endif // LOCAL_SENSORS_H

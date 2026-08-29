@@ -31,15 +31,15 @@ static RTC_DATA_ATTR time_t  strikeRateTimestamps[LIGHTNING_RATE_MAX_SAMPLES] = 
 static RTC_DATA_ATTR uint8_t strikeRateIndex = 0;
 static RTC_DATA_ATTR uint8_t strikeRateValidCount = 0;
 
-// Latch bounding a burst of strong-nearby strikes to a single forced-
-// early redraw (RTC_DATA_ATTR since the burst can span several deep-sleep
-// cycles); the alert icon flag, same reason. lastStrikeWasStrongClose is
+// Latch bounding a burst of close strikes to a single forced-early
+// redraw (RTC_DATA_ATTR since the burst can span several deep-sleep
+// cycles); the alert icon flag, same reason. lastStrikeWasClose is
 // NOT RTC_DATA_ATTR on purpose -- it only needs to answer for strikes
 // confirmed during this same boot, and must default back to false on
 // every fresh boot rather than carry a stale value from a previous one.
-static RTC_DATA_ATTR bool strongStrikeRedrawUsed = false;
+static RTC_DATA_ATTR bool closeStrikeRedrawUsed = false;
 static RTC_DATA_ATTR bool lightningAlertActive = false;
-static bool lastStrikeWasStrongClose = false;
+static bool lastStrikeWasClose = false;
 
 void initLocalSensors()
 {
@@ -139,8 +139,12 @@ void onConfirmedLightningStrike(int km, uint32_t energy)
     strikeRateValidCount++;
   }
 
-  lastStrikeWasStrongClose = (energy > LIGHTNING_ENERGY_HIGH_THRESHOLD) && (km < LIGHTNING_CLOSE_KM_THRESHOLD);
-  if (lastStrikeWasStrongClose)
+  // Proximity alert is distance-only: the AS3935's energy value is not a
+  // reliable proxy for "dangerously close" (real overhead strikes read
+  // energy ~17000, far below LIGHTNING_ENERGY_HIGH_THRESHOLD). Energy
+  // still drives the strike ring's thickness at draw time.
+  lastStrikeWasClose = (km <= LIGHTNING_ALERT_KM);
+  if (lastStrikeWasClose)
   {
     lightningAlertActive = true;
   }
@@ -180,17 +184,17 @@ void handleLightningIrqWake()
 
 bool shouldForceEarlyRedraw()
 {
-  if (lastStrikeWasStrongClose && !strongStrikeRedrawUsed)
+  if (lastStrikeWasClose && !closeStrikeRedrawUsed)
   {
-    strongStrikeRedrawUsed = true;
+    closeStrikeRedrawUsed = true;
     return true;
   }
   return false;
 }
 
-void resetStrongStrikeRedrawLatch()
+void resetCloseStrikeRedrawLatch()
 {
-  strongStrikeRedrawUsed = false;
+  closeStrikeRedrawUsed = false;
 }
 
 bool isLightningAlertActive()

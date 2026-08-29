@@ -56,12 +56,12 @@ void setup()
 
     if (isRedrawDue())
     {
-      resetStrongStrikeRedrawLatch();
+      resetCloseStrikeRedrawLatch();
       DEBUG_PRINTLN("IRQ wake, but a redraw is overdue -- drawing now instead of waiting for the timer...");
     }
     else if (shouldForceEarlyRedraw())
     {
-      DEBUG_PRINTLN("IRQ wake: strong nearby strike forcing an early redraw...");
+      DEBUG_PRINTLN("IRQ wake: close strike forcing an early redraw...");
     }
     else
     {
@@ -72,8 +72,8 @@ void setup()
   else
   {
     // Normal-cadence wake (timer) -- re-arms the forced-early-redraw
-    // latch above for the next strong-nearby burst.
-    resetStrongStrikeRedrawLatch();
+    // latch above for the next close-strike burst.
+    resetCloseStrikeRedrawLatch();
   }
 
   // Initialize modules

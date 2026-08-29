@@ -71,8 +71,8 @@ void drawDashedCircle(int16_t x, int16_t y, int16_t r, int16_t dashLength, int16
 void drawArc(int16_t x, int16_t y, int16_t r, float gapCenterAngleRad, int16_t gapLengthPx, uint16_t color = GxEPD_BLACK);
 
 // Draw a stylized lightning bolt (2 overlapping filled triangles) inside
-// the bounding box (x, y)-(x+w, y+h). Used as the "strong nearby strike"
-// alert icon on the lightning box.
+// the bounding box (x, y)-(x+w, y+h). Used as the close-strike alert
+// icon on the lightning box.
 void drawLightningBolt(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color = GxEPD_BLACK);
 
 // Callback type for paged refresh drawing

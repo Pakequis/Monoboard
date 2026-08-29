@@ -47,10 +47,10 @@ void setup()
     handleLightningIrqWake();                       //    Record the strike (if it's a real one), no display/WiFi
     if (isRedrawDue())
     {
-      resetStrongStrikeRedrawLatch();               //    Normal-cadence redraw -- re-arm the latch below
+      resetCloseStrikeRedrawLatch();               //    Normal-cadence redraw -- re-arm the latch below
       // fall through to a normal full redraw
     }
-    else if (shouldForceEarlyRedraw())               //    Strong strike within LIGHTNING_CLOSE_KM_THRESHOLD:
+    else if (shouldForceEarlyRedraw())               //    Close strike within LIGHTNING_ALERT_KM (energy irrelevant):
     {                                                 //    force one early redraw, latched so a burst of
       // fall through to a forced-early redraw          //    several doesn't force one each
     }
@@ -64,7 +64,7 @@ void setup()
   }
   else
   {
-    resetStrongStrikeRedrawLatch();                 // Normal-cadence wake (timer) also re-arms the latch
+    resetCloseStrikeRedrawLatch();                 // Normal-cadence wake (timer) also re-arms the latch
   }
 
   initDisplay();                                    // 1. Initialize display
@@ -107,7 +107,7 @@ This mirrors the actual control flow in `src/main.cpp` (debug logging and the re
 | `dashboard_manager.h/.cpp` | Draws the full dashboard: a one-line header (title, WiFi status, firmware version), then the 2x2 content grid -- top row (weather forecast + sensor temp/humidity, lightning box, calendar), bottom row (news headlines, clock + a reserved empty box) -- using `display_manager` primitives. No footer. |
 | `content_manager.h/.cpp` | RTC-memory caches for internet content: the 6-card weather forecast (code + temperature + `HHh` hour label per interval) and a 9-headline news carousel (3 buffers of 3, one buffer shown per screen redraw). `fetchNetworkContent()`, `getWeatherForecastIconChar()`/`getWeatherForecastHourLabel()`/`getWeatherForecastTemperatureNumberLabel()`, `advanceNewsCarousel()`, `getNewsHeadline()`. |
 | `lib/news_client` | `fetchTopHeadlines()` -- fetches the Google News RSS feed (`NEWS_API_URL`, locale-aware via `strings.h`) and streams it through a small tag-matching state machine (no full-body buffering, the feed runs well over 100KB) to pull out just the `<title>` of each `<item>`, cleaned up (source suffix stripped, HTML entities decoded, accents/smart punctuation transliterated to ASCII) for the display font. |
-| `local_sensors.h/.cpp` | `initLocalSensors()` once at boot, `readLocalSensors()` every wake (no network) + `getTempHumidityText()` for the DHT22 reading. AS3935 lightning: `handleLightningIrqWake()`/`onConfirmedLightningStrike()` record confirmed strikes (km + energy) into a ring buffer (`getStrikeHistoryCount()`/`getStrikeHistoryEntry()`, up to `STRIKE_HISTORY_COUNT`, cleared after `STRIKE_RESET_TIMEOUT_SEC` of silence) and a separate trailing-window buffer for `getLightningRateText()` (strikes in the last `LIGHTNING_RATE_WINDOW_SEC`, shown in the header). A strike above `LIGHTNING_ENERGY_HIGH_THRESHOLD` and within `LIGHTNING_CLOSE_KM_THRESHOLD` also sets the alert-icon flag (`isLightningAlertActive()`/`clearLightningAlert()`) and, on an IRQ wake where a redraw wasn't otherwise due, forces one early redraw -- `shouldForceEarlyRedraw()`/`resetStrongStrikeRedrawLatch()` latch this to at most one forced redraw per burst, re-armed on the next normal-cadence redraw. Each field independently shows a placeholder if its sensor isn't connected or the clock hasn't synced. |
+| `local_sensors.h/.cpp` | `initLocalSensors()` once at boot, `readLocalSensors()` every wake (no network) + `getTempHumidityText()` for the DHT22 reading. AS3935 lightning: `handleLightningIrqWake()`/`onConfirmedLightningStrike()` record confirmed strikes (km + energy) into a ring buffer (`getStrikeHistoryCount()`/`getStrikeHistoryEntry()`, up to `STRIKE_HISTORY_COUNT`, cleared after `STRIKE_RESET_TIMEOUT_SEC` of silence) and a separate trailing-window buffer for `getLightningRateText()` (strikes in the last `LIGHTNING_RATE_WINDOW_SEC`, shown in the header). A strike at or within `LIGHTNING_ALERT_KM` (distance only, energy irrelevant) also sets the alert-icon flag (`isLightningAlertActive()`/`clearLightningAlert()`) and, on an IRQ wake where a redraw wasn't otherwise due, forces one early redraw -- `shouldForceEarlyRedraw()`/`resetCloseStrikeRedrawLatch()` latch this to at most one forced redraw per burst, re-armed on the next normal-cadence redraw. Each field independently shows a placeholder if its sensor isn't connected or the clock hasn't synced. |
 | `debug.h` | `DEBUG_BEGIN`/`DEBUG_PRINT`/`DEBUG_PRINTLN` macros, gated by `APP_DEBUG_SERIAL` in `config.h` — expand to real `Serial.*` calls or nothing at all, compiled out entirely when off. |
 | `strings.h` | `STR_*` display-string keys, switched between PT-BR/EN at compile time via `APP_LANGUAGE`. Both language blocks must define the same set of keys. |
 | `lib/weather_client` | Fetches weather code + temperature + `is_day` (Open-Meteo) for the next `WEATHER_FORECAST_HOURS` complete hours shown in the forecast box, plus each interval's local `HHh` hour label. The interval currently in progress is excluded, so `WEATHER_API_URL` requests one extra interval (`forecast_hours=7`) to back the 6 displayed cards. `is_day` picks the day/night icon variant. |
@@ -314,7 +314,7 @@ void drawArc(int16_t x, int16_t y, int16_t r,
 
 ### `drawLightningBolt(x, y, w, h, color)`
 
-Draws a stylized lightning bolt (2 overlapping filled triangles) inside the bounding box `(x, y)`-`(x+w, y+h)`. Used as the lightning box's strong-nearby-strike alert icon (`isLightningAlertActive()`, `local_sensors.h`).
+Draws a stylized lightning bolt (2 overlapping filled triangles) inside the bounding box `(x, y)`-`(x+w, y+h)`. Used as the lightning box's close-strike alert icon (`isLightningAlertActive()`, `local_sensors.h`).
 
 ```cpp
 void drawLightningBolt(int16_t x, int16_t y, int16_t w, int16_t h,

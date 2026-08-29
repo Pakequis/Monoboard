@@ -141,11 +141,16 @@
 #define WEATHER_ICON_Y_OFFSET        75  // baseline y offset from a rectangle's top, for the icon
 
 // ---- Top row, box 2 (middle): lightning ("Raios") distance box ----
-// Real 0-40km distance scale: 4 dashed rings at round-number km values
-// (not matched to the chip's 15 discrete distance-table entries), each
-// labeled. Confirmed strikes overlay as solid, thick rings at their
-// real distance -- see STRIKE_HISTORY_COUNT/LIGHTNING_ENERGY_* below.
-// Header shows the strike rate (getLightningRateText(),
+// Distance scale: 4 dashed rings at even quarters of the box radius, km
+// labels not matched to the chip's 15 discrete distance-table entries.
+// The scale range is adaptive (see dashboard_manager.cpp): the outer
+// ring is LIGHTNING_MAX_KM normally, but drops to
+// LIGHTNING_CLOSE_KM_THRESHOLD while every strike in history is that
+// near, so a close storm's strikes spread out instead of bunching at the
+// center. Confirmed strikes overlay as solid, thick rings at their real
+// distance -- or a filled center disc for an "overhead" reading (see
+// LIGHTNING_OVERHEAD_KM). See STRIKE_HISTORY_COUNT/LIGHTNING_ENERGY_*
+// below. Header shows the strike rate (getLightningRateText(),
 // LIGHTNING_RATE_WINDOW_SEC below).
 // This box's width is whatever's left between the weather grid and the
 // calendar (both fixed-width) -- it self-adjusts, no hardcoded width.
@@ -162,12 +167,28 @@
                                          // strike ring never overwrites a ruler number label
 // Strikes closer than this draw a full circle instead of a gapped arc
 // (may overlap the 10km ring's own label -- accepted, since a full
-// circle reads as "very close" more clearly than a gap would). Also the
-// distance half of the strong-nearby-strike redraw/alert trigger below.
+// circle reads as "very close" more clearly than a gap would).
 #define LIGHTNING_CLOSE_KM_THRESHOLD    10
-// Alert icon (lightning bolt) shown in the header when a strike lands
-// both above LIGHTNING_ENERGY_HIGH_THRESHOLD and inside
-// LIGHTNING_CLOSE_KM_THRESHOLD -- see local_sensors.h's isLightningAlertActive().
+// Minimum on-screen radius (px) for a confirmed-strike overlay ring. The
+// linear km->radius mapping otherwise collapses a nearby strike to ~1px,
+// hidden under the center dot -- exactly the strikes that matter most.
+// Clamped so any strike from LIGHTNING_CLOSE_KM_THRESHOLD inward still
+// reads as a distinct ring.
+#define LIGHTNING_STRIKE_MIN_R          10
+// A distance-table reading at or below this (km) is the AS3935's "storm
+// overhead" code (register value 1). Drawn as a filled disc at the box
+// center instead of a ring (a ring would collapse under the center
+// marker), and always raises the proximity alert regardless of energy.
+#define LIGHTNING_OVERHEAD_KM           1
+#define LIGHTNING_OVERHEAD_DISC_R       6   // px, filled-disc radius for an overhead strike
+// Proximity alert: the lightning-bolt icon in the "Raios" header, plus
+// one forced early redraw per burst (see local_sensors.h's
+// shouldForceEarlyRedraw()), fires whenever a confirmed strike lands at
+// or within this distance (km), independent of its energy -- the
+// AS3935's energy value is not a reliable proxy for "dangerously close"
+// (real overhead strikes were observed at energy ~17000, far below
+// LIGHTNING_ENERGY_HIGH_THRESHOLD).
+#define LIGHTNING_ALERT_KM             5
 #define LIGHTNING_ALERT_ICON_SIZE       14  // px, square bounding box
 #define LIGHTNING_ALERT_ICON_MARGIN    6   // px, gap from the header bar's right edge
 
@@ -184,9 +205,12 @@
 #define STRIKE_RESET_TIMEOUT_SEC (2UL * 60UL * 60UL)
 #endif
 // The AS3935's energy value has no defined physical unit (datasheet: "a
-// pure value that doesn't have any physical meaning") -- these are a
-// starting guess for 3 relative ring-thickness tiers, to retune once real
-// strikes are observed.
+// pure value that doesn't have any physical meaning") -- these only pick
+// the strike ring's thickness tier (thin/medium/thick), nothing else.
+// The proximity alert is distance-only (LIGHTNING_ALERT_KM above), not
+// energy-gated: real overhead strikes were observed at energy ~17000,
+// far below HIGH. Still a rough guess for the thickness tiers -- retune
+// once more real samples across a range of distances are collected.
 #define LIGHTNING_ENERGY_MEDIUM_THRESHOLD  50000UL
 #define LIGHTNING_ENERGY_HIGH_THRESHOLD    300000UL
 

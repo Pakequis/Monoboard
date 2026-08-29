@@ -144,15 +144,40 @@ void drawDashboard()
     int16_t lightningRingsHeight = lightningY1 - lightningRingsTop;
     int16_t lightningMaxR = min(lightningWidth, lightningRingsHeight) / 2 - 6;
 
-    static const uint8_t LIGHTNING_RING_KM_VALUES[LIGHTNING_RING_COUNT] = {10, 20, 30, 40};
+    // Adaptive ruler range: when every strike currently in history is
+    // within LIGHTNING_CLOSE_KM_THRESHOLD, zoom the scale to that range so
+    // near strikes spread across the box instead of bunching at the
+    // center. A single strike beyond it (kept in history until
+    // STRIKE_RESET_TIMEOUT_SEC of silence) snaps the ruler back to the
+    // full LIGHTNING_MAX_KM range. The rings always sit at even quarters
+    // of the box radius -- only their km labels change.
+    uint8_t strikeCount = getStrikeHistoryCount();
+    uint8_t lightningScaleMaxKm = LIGHTNING_MAX_KM;
+    if (strikeCount > 0)
+    {
+      lightningScaleMaxKm = LIGHTNING_CLOSE_KM_THRESHOLD;
+      for (uint8_t i = 0; i < strikeCount; i++)
+      {
+        uint8_t km = 0;
+        uint32_t energy = 0;
+        getStrikeHistoryEntry(i, &km, &energy);
+        if (km > LIGHTNING_CLOSE_KM_THRESHOLD)
+        {
+          lightningScaleMaxKm = LIGHTNING_MAX_KM;
+          break;
+        }
+      }
+    }
+
     float lightningLabelAngleRad = LIGHTNING_RING_LABEL_ANGLE_DEG * PI / 180.0f;
     for (int ring = 0; ring < LIGHTNING_RING_COUNT; ring++)
     {
-      int16_t ringR = (int16_t)(lightningMaxR * ((float)LIGHTNING_RING_KM_VALUES[ring] / LIGHTNING_MAX_KM));
+      int16_t ringR = (int16_t)(lightningMaxR * ((float)(ring + 1) / LIGHTNING_RING_COUNT));
       drawDashedCircle(lightningCx, lightningCy, ringR, LIGHTNING_DASH_LENGTH, LIGHTNING_DASH_GAP, GxEPD_BLACK);
 
-      char kmLabel[5];
-      snprintf(kmLabel, sizeof(kmLabel), "%u", LIGHTNING_RING_KM_VALUES[ring]);
+      char kmLabel[6];
+      float ringKm = lightningScaleMaxKm * (float)(ring + 1) / LIGHTNING_RING_COUNT;
+      snprintf(kmLabel, sizeof(kmLabel), "%g", ringKm);
       int16_t labelX = lightningCx + (int16_t)(ringR * cosf(lightningLabelAngleRad));
       int16_t labelY = lightningCy + (int16_t)(ringR * sinf(lightningLabelAngleRad));
       writeText(labelX, labelY, kmLabel, &FreeMonoBold9pt7b, GxEPD_BLACK);
@@ -166,27 +191,44 @@ void drawDashboard()
     writeText(lightningX0 + LIGHTNING_UNIT_LABEL_X_OFFSET, lightningY1 - LIGHTNING_UNIT_LABEL_Y_OFFSET,
               "km", &FreeMonoBold9pt7b, GxEPD_BLACK);
 
-    uint8_t strikeCount = getStrikeHistoryCount();
     for (uint8_t i = 0; i < strikeCount; i++)
     {
       uint8_t strikeKm = 0;
       uint32_t strikeEnergy = 0;
       getStrikeHistoryEntry(i, &strikeKm, &strikeEnergy);
 
-      int16_t strikeR = (int16_t)(lightningMaxR * ((float)strikeKm / LIGHTNING_MAX_KM));
+      int8_t thickness = (strikeEnergy >= LIGHTNING_ENERGY_HIGH_THRESHOLD) ? 2
+                        : (strikeEnergy >= LIGHTNING_ENERGY_MEDIUM_THRESHOLD) ? 1
+                        : 0;
+
+      if (strikeKm <= LIGHTNING_OVERHEAD_KM)
+      {
+        // The AS3935's "storm overhead" reading (register value 1): a ring
+        // would collapse under the center marker, so draw a filled disc
+        // instead -- unmistakably "right on top of us", visually distinct
+        // from a merely close strike's ring.
+        fillCircle(lightningCx, lightningCy, LIGHTNING_OVERHEAD_DISC_R + thickness, GxEPD_BLACK);
+        continue;
+      }
+
+      // Linear km->radius against the current ruler range, clamped both
+      // ends: the far end can't spill past the outer ring, and the near
+      // end can't collapse into the center dot (LIGHTNING_STRIKE_MIN_R).
+      int16_t strikeR = (int16_t)(lightningMaxR * ((float)strikeKm / lightningScaleMaxKm));
       if (strikeR > lightningMaxR)
       {
         strikeR = lightningMaxR;
       }
+      if (strikeR < LIGHTNING_STRIKE_MIN_R)
+      {
+        strikeR = LIGHTNING_STRIKE_MIN_R;
+      }
 
-      int8_t thickness = (strikeEnergy >= LIGHTNING_ENERGY_HIGH_THRESHOLD) ? 2
-                        : (strikeEnergy >= LIGHTNING_ENERGY_MEDIUM_THRESHOLD) ? 1
-                        : 0;
       if (strikeKm < LIGHTNING_CLOSE_KM_THRESHOLD)
       {
         // Close enough to draw the full circle instead of a gapped arc --
-        // reads as "very close" more clearly, even if it overlaps the
-        // 10km ring's own label.
+        // reads as "very close" more clearly, even if it overlaps a
+        // ring's own label.
         for (int8_t offset = -thickness; offset <= thickness; offset++)
         {
           drawCircle(lightningCx, lightningCy, strikeR + offset, GxEPD_BLACK);
