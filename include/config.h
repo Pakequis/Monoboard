@@ -141,17 +141,17 @@
 #define WEATHER_ICON_Y_OFFSET        75  // baseline y offset from a rectangle's top, for the icon
 
 // ---- Top row, box 2 (middle): lightning ("Raios") distance box ----
-// Distance scale: 4 dashed rings at even quarters of the box radius, km
-// labels not matched to the chip's 15 discrete distance-table entries.
-// The scale range is adaptive (see dashboard_manager.cpp): the outer
-// ring is LIGHTNING_MAX_KM normally, but drops to
-// LIGHTNING_CLOSE_KM_THRESHOLD while every strike in history is that
-// near, so a close storm's strikes spread out instead of bunching at the
-// center. Confirmed strikes overlay as solid, thick rings at their real
-// distance -- or a filled center disc for an "overhead" reading (see
-// LIGHTNING_OVERHEAD_KM). See STRIKE_HISTORY_COUNT/LIGHTNING_ENERGY_*
-// below. Header shows the strike rate (getLightningRateText(),
-// LIGHTNING_RATE_WINDOW_SEC below).
+// Distance scale: 4 dashed rings, adaptive range (see
+// dashboard_manager.cpp). Normal mode: rings at 10/20/30/40 km. Close
+// mode (every strike in history within LIGHTNING_CLOSE_KM_THRESHOLD):
+// rings at the AS3935's own near distance-table entries 5/6/8/10 km, so
+// a close storm's strikes spread across the box and each lands exactly
+// on a ring the sensor can report. A single strike beyond
+// LIGHTNING_CLOSE_KM_THRESHOLD snaps the ruler back to normal. Confirmed
+// strikes overlay as solid, thick rings at their real distance -- or a
+// filled center disc for an "overhead" reading (see LIGHTNING_OVERHEAD_KM).
+// See STRIKE_HISTORY_COUNT/LIGHTNING_ENERGY_* below. Header shows the
+// strike rate (getLightningRateText(), LIGHTNING_RATE_WINDOW_SEC below).
 // This box's width is whatever's left between the weather grid and the
 // calendar (both fixed-width) -- it self-adjusts, no hardcoded width.
 #define LIGHTNING_RING_COUNT            4   // concentric rings drawn below the header bar

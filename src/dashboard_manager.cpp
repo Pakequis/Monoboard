@@ -144,40 +144,42 @@ void drawDashboard()
     int16_t lightningRingsHeight = lightningY1 - lightningRingsTop;
     int16_t lightningMaxR = min(lightningWidth, lightningRingsHeight) / 2 - 6;
 
-    // Adaptive ruler range: when every strike currently in history is
-    // within LIGHTNING_CLOSE_KM_THRESHOLD, zoom the scale to that range so
-    // near strikes spread across the box instead of bunching at the
-    // center. A single strike beyond it (kept in history until
-    // STRIKE_RESET_TIMEOUT_SEC of silence) snaps the ruler back to the
-    // full LIGHTNING_MAX_KM range. The rings always sit at even quarters
-    // of the box radius -- only their km labels change.
+    // Adaptive ruler range. Normal mode: rings at 10/20/30/40 km. Close
+    // mode (every strike currently in history is within
+    // LIGHTNING_CLOSE_KM_THRESHOLD): rings at the AS3935's own near
+    // distance-table entries 5/6/8/10 km, so a close storm's strikes
+    // spread across the box and each lands exactly on a ring the sensor
+    // can actually report -- and every label stays a whole number. A
+    // single strike beyond LIGHTNING_CLOSE_KM_THRESHOLD (kept in history
+    // until STRIKE_RESET_TIMEOUT_SEC of silence) snaps the ruler back to
+    // normal.
+    static const uint8_t LIGHTNING_RING_KM_WIDE[LIGHTNING_RING_COUNT]  = {10, 20, 30, LIGHTNING_MAX_KM};
+    static const uint8_t LIGHTNING_RING_KM_CLOSE[LIGHTNING_RING_COUNT] = {5, 6, 8, LIGHTNING_CLOSE_KM_THRESHOLD};
+
     uint8_t strikeCount = getStrikeHistoryCount();
-    uint8_t lightningScaleMaxKm = LIGHTNING_MAX_KM;
-    if (strikeCount > 0)
+    bool lightningCloseScale = (strikeCount > 0);
+    for (uint8_t i = 0; i < strikeCount; i++)
     {
-      lightningScaleMaxKm = LIGHTNING_CLOSE_KM_THRESHOLD;
-      for (uint8_t i = 0; i < strikeCount; i++)
+      uint8_t km = 0;
+      uint32_t energy = 0;
+      getStrikeHistoryEntry(i, &km, &energy);
+      if (km > LIGHTNING_CLOSE_KM_THRESHOLD)
       {
-        uint8_t km = 0;
-        uint32_t energy = 0;
-        getStrikeHistoryEntry(i, &km, &energy);
-        if (km > LIGHTNING_CLOSE_KM_THRESHOLD)
-        {
-          lightningScaleMaxKm = LIGHTNING_MAX_KM;
-          break;
-        }
+        lightningCloseScale = false;
+        break;
       }
     }
+    const uint8_t* lightningRingKm = lightningCloseScale ? LIGHTNING_RING_KM_CLOSE : LIGHTNING_RING_KM_WIDE;
+    uint8_t lightningScaleMaxKm = lightningRingKm[LIGHTNING_RING_COUNT - 1];
 
     float lightningLabelAngleRad = LIGHTNING_RING_LABEL_ANGLE_DEG * PI / 180.0f;
     for (int ring = 0; ring < LIGHTNING_RING_COUNT; ring++)
     {
-      int16_t ringR = (int16_t)(lightningMaxR * ((float)(ring + 1) / LIGHTNING_RING_COUNT));
+      int16_t ringR = (int16_t)(lightningMaxR * ((float)lightningRingKm[ring] / lightningScaleMaxKm));
       drawDashedCircle(lightningCx, lightningCy, ringR, LIGHTNING_DASH_LENGTH, LIGHTNING_DASH_GAP, GxEPD_BLACK);
 
-      char kmLabel[6];
-      float ringKm = lightningScaleMaxKm * (float)(ring + 1) / LIGHTNING_RING_COUNT;
-      snprintf(kmLabel, sizeof(kmLabel), "%g", ringKm);
+      char kmLabel[4];
+      snprintf(kmLabel, sizeof(kmLabel), "%u", lightningRingKm[ring]);
       int16_t labelX = lightningCx + (int16_t)(ringR * cosf(lightningLabelAngleRad));
       int16_t labelY = lightningCy + (int16_t)(ringR * sinf(lightningLabelAngleRad));
       writeText(labelX, labelY, kmLabel, &FreeMonoBold9pt7b, GxEPD_BLACK);
