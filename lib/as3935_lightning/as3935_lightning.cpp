@@ -11,30 +11,45 @@
 static SparkFun_AS3935 lightning(defAddr);
 static bool sensorPresent = false;
 
-bool initAs3935()
+bool beginAs3935Bus()
 {
   Wire.begin(PIN_AS3935_SDA, PIN_AS3935_SCL);
   sensorPresent = lightning.begin(Wire);
-  if (sensorPresent)
-  {
-    lightning.setIndoorOutdoor(INDOOR);
-    // AS3935_TUNE_CAP (config.h) was measured once via an IRQ-pin pulse-count
-    // sweep across all 16 steps -- 0pF was already the closest to the
-    // 500kHz antenna target (496480Hz, 0.7% off), so no extra capacitance
-    // is added; this call just makes that verified value explicit rather
-    // than relying on it silently matching the chip's power-on default.
-    lightning.tuneCap(AS3935_TUNE_CAP);
-    lightning.calibrateOsc();
-    // Without this, every disturber event (common indoors -- WiFi,
-    // switching power supplies, etc.) raises the IRQ pin exactly like a
-    // real strike would, and since that pin is the ext1 deep-sleep wake
-    // source, a disturber storm re-wakes the board faster than the
-    // screen's own redraw timer, starving it forever. Confirmed via
-    // serial: raw interrupt register read 0x4 (DISTURBER_DETECT) on every
-    // wake in a tight loop, never reaching the timer-driven redraw path.
-    lightning.maskDisturber(true);
-  }
   return sensorPresent;
+}
+
+bool initAs3935()
+{
+  if (!beginAs3935Bus())
+  {
+    return false;
+  }
+
+  lightning.setIndoorOutdoor(INDOOR);
+  // AS3935_TUNE_CAP (config.h) was measured once via an IRQ-pin pulse-count
+  // sweep across all 16 steps -- 0pF was already the closest to the
+  // 500kHz antenna target (496480Hz, 0.7% off), so no extra capacitance
+  // is added; this call just makes that verified value explicit rather
+  // than relying on it silently matching the chip's power-on default.
+  lightning.tuneCap(AS3935_TUNE_CAP);
+  lightning.calibrateOsc();
+  // Without this, every disturber event (common indoors -- WiFi,
+  // switching power supplies, etc.) raises the IRQ pin exactly like a
+  // real strike would, and since that pin is the ext1 deep-sleep wake
+  // source, a disturber storm re-wakes the board faster than the
+  // screen's own redraw timer, starving it forever. Confirmed via
+  // serial: raw interrupt register read 0x4 (DISTURBER_DETECT) on every
+  // wake in a tight loop, never reaching the timer-driven redraw path.
+  //
+  // maskDisturber() is a read-modify-write of REG0x03 -- the same
+  // register that reports the interrupt reason -- and reading REG0x03
+  // clears its pending interrupt bits. That is why the AS3935 IRQ wake
+  // path uses beginAs3935Bus() + readAs3935() rather than this function:
+  // it has to read the strike interrupt before any such write consumes
+  // it. Safe to write here because initAs3935() only runs on a cold boot
+  // or a timer wake, when no unread strike interrupt is pending.
+  lightning.maskDisturber(true);
+  return true;
 }
 
 uint8_t readAs3935Diagnostic(int* lightningKmOut, uint32_t* energyOut)

@@ -153,7 +153,12 @@ void onConfirmedLightningStrike(int km, uint32_t energy)
 
 void handleLightningIrqWake()
 {
-  bool present = initAs3935();
+  // Bus bring-up only, not initAs3935(): the sensor keeps its config
+  // across the ESP32's deep sleep (it is never powered down), and a full
+  // init writes REG0x03 (maskDisturber), whose read-modify-write clears
+  // the strike interrupt this wake exists to read. The interrupt has to
+  // be read before any such write consumes it.
+  bool present = beginAs3935Bus();
   if (!present)
   {
     DEBUG_PRINTLN("Lightning IRQ wake: AS3935 not detected");

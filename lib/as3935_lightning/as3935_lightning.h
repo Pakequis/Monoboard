@@ -3,9 +3,22 @@
 
 #include <Arduino.h>
 
-// Initializes the AS3935 lightning sensor over I2C. Call once from
-// setup(). Returns true if the sensor acknowledged on the bus
-// (present/wired); false otherwise.
+// Brings up the I2C bus for the AS3935 and checks that the sensor
+// acknowledges, WITHOUT writing any configuration register. Use this on
+// an AS3935 IRQ deep-sleep wake: the sensor keeps its configuration
+// across the ESP32's deep sleep (it is never powered down), and any
+// config write here -- maskDisturber() above all -- is a read-modify-
+// write of REG0x03, the interrupt-reason register, and reading it clears
+// the pending strike interrupt this wake needs to read first. Returns
+// true if the sensor acknowledged on the bus.
+bool beginAs3935Bus();
+
+// Full initialization: brings up the bus (as beginAs3935Bus()) and then
+// writes the sensor configuration (indoor mode, antenna tuning,
+// oscillator calibration, disturber masking). Call from a cold boot or a
+// timer wake -- never from an IRQ wake, where writing REG0x03 would
+// consume an unread strike interrupt. Returns true if the sensor is
+// present.
 bool initAs3935();
 
 // Checks for a confirmed LIGHTNING interrupt since the last read. Returns
@@ -30,8 +43,7 @@ uint8_t readAs3935Diagnostic(int* lightningKmOut, uint32_t* energyOut);
 void armAs3935IrqWakeup();
 
 // Returns true if the current wake was caused by the AS3935's IRQ pin
-// (as opposed to the deep-sleep timer, the manual-refresh button, or a
-// fresh power-on).
+// (as opposed to the deep-sleep timer or a fresh power-on).
 bool isWakeFromAs3935Irq();
 
 #endif // AS3935_LIGHTNING_H
