@@ -42,6 +42,15 @@
 // An epoch below this is treated as "unset" (RTC not yet synced via NTP)
 #define NTP_EPOCH_VALID_THRESHOLD 100000
 
+// Sanity floor for an NTP result: 2025-01-01 00:00:00 UTC, comfortably
+// before this firmware existed. A sync that comes back below this is a
+// bad server response (pool.ntp.org occasionally hands out garbage) and
+// is rejected rather than written to the clock -- a wrong "now" that is
+// still above NTP_EPOCH_VALID_THRESHOLD would otherwise pass every
+// downstream validity check and, worse, make already-stored strike
+// timestamps look like they are in the future (see getLightningRateText).
+#define NTP_EPOCH_PLAUSIBLE_MIN 1735689600
+
 // ===== Display Configuration =====
 #define DISPLAY_FRAME_MARGIN    5   // pixels
 #define DISPLAY_RESET_PULSE_MS  10UL // hardware reset pulse width, and GxEPD2's own internal reset duration
@@ -196,8 +205,10 @@
 #define STRIKE_HISTORY_COUNT 5
 // 2 hours of no confirmed strike clears the distance-ring history (the
 // visual overlay on the "Raios" box's scale). The header's own count
-// (LIGHTNING_RATE_WINDOW_SEC below) is a real trailing window instead, so
-// it self-expires and doesn't need this reset. Wrapped in #ifndef so a
+// (LIGHTNING_RATE_WINDOW_SEC below) is a real trailing window that should
+// self-expire, but resetStrikeStateIfStale() clears its buffer on this
+// same timeout too, as a backstop for entries stuck in the window by a
+// clock that later moved backward. Wrapped in #ifndef so a
 // verification build can override it to a short value (e.g.
 // -D STRIKE_RESET_TIMEOUT_SEC=8UL) without editing this file, same pattern
 // as APP_DEBUG_SERIAL above.

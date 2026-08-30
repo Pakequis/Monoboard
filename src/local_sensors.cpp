@@ -98,7 +98,7 @@ void getTempHumidityText(char* outText, size_t outTextSize)
   snprintf(outText, outTextSize, "%s %s", tempBuf, humBuf);
 }
 
-static void resetStrikeHistoryIfStale()
+static void resetStrikeStateIfStale()
 {
   time_t now = time(nullptr);
 
@@ -111,17 +111,23 @@ static void resetStrikeHistoryIfStale()
   bool nowValid = now >= (time_t)NTP_EPOCH_VALID_THRESHOLD;
   bool lastStrikeValid = lastStrikeEpoch >= (time_t)NTP_EPOCH_VALID_THRESHOLD;
 
-  if (strikeHistoryValidCount > 0 && nowValid && lastStrikeValid && (now - lastStrikeEpoch) > (time_t)STRIKE_RESET_TIMEOUT_SEC)
+  if ((strikeHistoryValidCount > 0 || strikeRateValidCount > 0) && nowValid && lastStrikeValid && (now - lastStrikeEpoch) > (time_t)STRIKE_RESET_TIMEOUT_SEC)
   {
     strikeHistoryValidCount = 0;
     strikeHistoryIndex = 0;
-    DEBUG_PRINTLN("Lightning strike history reset (2h+ since last strike)");
+    // The header's rate buffer is cleared here too. Its trailing window
+    // (getLightningRateText()) is supposed to self-expire entries, but a
+    // timestamp at or ahead of a later, corrected clock never leaves the
+    // window -- so this staleness rule is the backstop that unsticks it.
+    strikeRateValidCount = 0;
+    strikeRateIndex = 0;
+    DEBUG_PRINTLN("Lightning strike history + rate reset (2h+ since last strike)");
   }
 }
 
 void onConfirmedLightningStrike(int km, uint32_t energy)
 {
-  resetStrikeHistoryIfStale();
+  resetStrikeStateIfStale();
 
   strikeHistoryKm[strikeHistoryIndex] = (uint8_t)km;
   strikeHistoryEnergy[strikeHistoryIndex] = energy;
@@ -215,6 +221,8 @@ void getLightningRateText(char* outText, size_t outTextSize)
     return;
   }
 
+  resetStrikeStateIfStale();
+
   time_t now = time(nullptr);
   if (now < (time_t)NTP_EPOCH_VALID_THRESHOLD)
   {
@@ -228,7 +236,12 @@ void getLightningRateText(char* outText, size_t outTextSize)
   for (uint8_t i = 0; i < strikeRateValidCount; i++)
   {
     time_t entry = strikeRateTimestamps[i];
-    if (entry >= (time_t)NTP_EPOCH_VALID_THRESHOLD && (now - entry) <= (time_t)LIGHTNING_RATE_WINDOW_SEC)
+    // entry <= now guards against a strike timestamped ahead of the
+    // current clock (recorded on an IRQ wake while the RTC had drifted
+    // forward, then NTP corrected it back): time_t is signed, so without
+    // this check a future entry gives a negative (now - entry) that
+    // always satisfies the window test and never expires.
+    if (entry >= (time_t)NTP_EPOCH_VALID_THRESHOLD && entry <= now && (now - entry) <= (time_t)LIGHTNING_RATE_WINDOW_SEC)
     {
       countInWindow++;
     }
@@ -238,7 +251,7 @@ void getLightningRateText(char* outText, size_t outTextSize)
 
 uint8_t getStrikeHistoryCount()
 {
-  resetStrikeHistoryIfStale();
+  resetStrikeStateIfStale();
   return strikeHistoryValidCount;
 }
 

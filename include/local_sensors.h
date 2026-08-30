@@ -32,13 +32,15 @@ void getTemperatureNumberText(char* outText, size_t outTextSize);
 // strikes in the last hour -- not a since-last-reset cumulative total),
 // shown in the "Raios" header. Writes STR_VALUE_PLACEHOLDER ("--") if the
 // AS3935 isn't detected or the clock hasn't synced yet (a time window is
-// meaningless without a trustworthy clock). Buffer must be at least
-// LIGHTNING_STATUS_TEXT_LEN bytes.
+// meaningless without a trustworthy clock). Applies the reset-if-stale
+// check first, and ignores any stored timestamp at or ahead of the
+// current clock. Buffer must be at least LIGHTNING_STATUS_TEXT_LEN bytes.
 void getLightningRateText(char* outText, size_t outTextSize);
 
 // Returns how many of the last STRIKE_HISTORY_COUNT confirmed strikes are
 // currently valid (0..STRIKE_HISTORY_COUNT). Applies the reset-if-stale
-// check first (STRIKE_RESET_TIMEOUT_SEC of no strikes clears this history).
+// check first (STRIKE_RESET_TIMEOUT_SEC of no strikes clears both this
+// history and the header's rate buffer).
 uint8_t getStrikeHistoryCount();
 
 // Fills outKm/outEnergy for strike history slot `index`, ordered oldest

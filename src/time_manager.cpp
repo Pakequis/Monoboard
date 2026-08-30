@@ -48,10 +48,19 @@ void syncTimeViaNTP()
   }
   DEBUG_PRINTLN();
 
-  if (now >= NTP_EPOCH_VALID_THRESHOLD)
+  if (now >= NTP_EPOCH_PLAUSIBLE_MIN)
   {
     DEBUG_PRINTLN("syncTimeViaNTP: NTP sync successful");
     lastSyncEpoch = now;
+  }
+  else if (now >= NTP_EPOCH_VALID_THRESHOLD)
+  {
+    // Above the "unset" threshold but before this firmware could have
+    // been built -- a bad NTP response. Leave the clock untouched and
+    // treat it as a failed sync so the next wake retries.
+    DEBUG_PRINT("syncTimeViaNTP: implausible epoch ");
+    DEBUG_PRINT((long)now);
+    DEBUG_PRINTLN(" rejected - keeping previous RTC time");
   }
   else
   {
