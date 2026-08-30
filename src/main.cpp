@@ -12,6 +12,7 @@
 #include "content_manager.h"
 #include "local_sensors.h"
 #include "as3935_lightning.h"
+#include "screen_ruler.h"
 #include <time.h>
 
 static void goToSleep()
@@ -47,6 +48,12 @@ void setup()
   DEBUG_PRINTLN("========================================");
   DEBUG_PRINTLN("Monoboard - Starting up");
   DEBUG_PRINTLN("========================================");
+
+#if SHOW_SCREEN_RULER
+  // Diagnostic/templating build: draw the screen ruler and sleep for
+  // good. Never returns.
+  enterScreenRulerMode();
+#endif
 
   bool irqWake = isWakeFromAs3935Irq();
   if (irqWake)

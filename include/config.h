@@ -76,6 +76,18 @@
 #define APP_DEBUG_SERIAL 0
 #endif
 
+// 1 = on boot, ignore the normal dashboard and instead draw the
+// screen-measurement reference (cm rulers on every edge + a 10 cm
+// calibration bar), latch it on the e-paper, and deep-sleep forever --
+// for physically templating an enclosure. 0 = normal firmware. The code
+// is always compiled in; this only gates whether main.cpp reaches it.
+// Override without editing this file: -D SHOW_SCREEN_RULER=1 (the
+// screen_ruler PlatformIO env does exactly that). Return to normal by
+// reflashing with this at 0.
+#ifndef SHOW_SCREEN_RULER
+#define SHOW_SCREEN_RULER 0
+#endif
+
 // ===== Firmware =====
 #define FIRMWARE_VERSION "v1.0.0"
 

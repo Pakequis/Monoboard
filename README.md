@@ -12,7 +12,8 @@ Firmware project for a dashboard on a Waveshare 7.5" e-paper display, driven by 
 - **Deep‑sleep power saving** – The board sleeps for `DEEP_SLEEP_INTERVAL_SEC` (currently 60 s) and wakes on timer or the AS3935 lightning sensor’s IRQ pin (`ext1`).
 - **Weather forecast** – Pulls 6‑hour forecast from Open‑Meteo (temperature, weather codes, day/night icons). Labels and month/weekday names are displayed in Portuguese or English per `APP_LANGUAGE`.
 - **Local sensors** – DHT22 (temperature / humidity).
-- **Lightning detection** – SparkFun AS3935 detects lightning strikes, reports distance rings (10/20/30/40 km) and stores a 5‑entry history in RTC memory.
+- **Lightning detection** – SparkFun AS3935 detects strikes and shows an adaptive distance scale (rings at 10/20/30/40 km, tightening to 4/6/8/10 km for a close storm), a strikes-per-hour count in the box header (sliding 1-hour window), and a 5‑entry strike history in RTC memory. The chip’s noise-rejection thresholds are tightened above their permissive power-on defaults so indoor electrical transients don’t register as strikes — see `docs/Lightning Detection.md`.
+- **Screen measurement mode** – A build-time flag (`SHOW_SCREEN_RULER`, or the `screen_ruler` PlatformIO env) replaces the dashboard with calibrated centimetre rulers on every edge plus a 10 cm calibration bar, latched on the panel for use as a 1:1 physical template — see `docs/Screen Measurement Mode.md`.
 - **Monthly calendar** – Shows the current month with weekday/ month names translated; 
 - **Seven‑segment clock** – DSEG7 Classic Bold font, synced via NTP; displays `HH:MM` in the bottom‑right quadrant.
 - **News carousel** – Rotating carousel of headline headlines from Google RSS (PT‑BR or EN locale). Enabled/disabled via `FEATURE_NEWS_ENABLED`.
@@ -27,11 +28,15 @@ Firmware project for a dashboard on a Waveshare 7.5" e-paper display, driven by 
 | `docs/Pin Mapping.md`   | ESP32 and ESP32-S3 pin mapping for the display and sensors |
 | `docs/API Reference.md` | Code usage guide — available functions and examples |
 | `docs/Internationalization.md` | PT-BR/EN string-switching mechanism: keys, constraints, how to add strings/languages |
+| `docs/Lightning Detection.md` | AS3935 IRQ wake, the strikes/hour metric, noise-rejection tuning, the `as3935_monitor` diagnostic build |
+| `docs/Screen Measurement Mode.md` | `SHOW_SCREEN_RULER` — edge rulers + calibrated 10 cm bar latched on the panel as a physical template |
 
 ## Technologies
 
 - **Platform**: PlatformIO
 - **Framework**: Arduino (ESP32-S3; `esp32-s3-devkitc-1` is the production firmware env — see `platformio.ini`). A separate `native` environment (no board, no Arduino) runs host-compiled Unity unit tests for a few pure-logic modules — `pio test -e native`.
+- **Extra build environments** (`platformio.ini`): `screen_ruler` — the production binary with `-DSHOW_SCREEN_RULER=1` (see `docs/Screen Measurement Mode.md`); `as3935_monitor` and `wifi_lightning_noise_test` — standalone diagnostic sketches for the lightning sensor (see `docs/Lightning Detection.md`). None of these are flashed as the normal firmware.
+- **Build flags**: `APP_DEBUG_SERIAL` (serial logging on/off, default off), `SHOW_SCREEN_RULER` (default off), `APP_LANGUAGE` (`LANG_PT_BR`/`LANG_EN`) — all in `config.h` under `#ifndef`, so a `-D` flag overrides without editing the file.
 - **Display**: Waveshare 7.5" (GxEPD2_750) — 640×384 px
 - **Libraries**: GxEPD2, Adafruit GFX, Adafruit BusIO, ArduinoJson, DHT sensor library, Adafruit Unified Sensor, SparkFun AS3935 Lightning Detector, WiFi, HTTPClient (all in `platformio.ini`'s `lib_deps` except the last two, which ship with the Arduino-ESP32 core)
 
