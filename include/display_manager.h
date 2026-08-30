@@ -81,6 +81,13 @@ typedef void (*DrawFunction)();
 // Update the display (refresh screen) using a paged draw callback
 void updateScreen(DrawFunction drawFunc);
 
+// Flush the panel with `cycles` black<->white full-refresh pairs to clear
+// accumulated ghosting from a long run of near-identical images, leaving
+// it white. Blocks ~9 s per cycle (two ~4.5 s full refreshes). The caller
+// is expected to redraw content afterwards. See DISPLAY_CONDITION_* in
+// config.h.
+void conditionPanel(uint8_t cycles);
+
 // Put display to sleep (power off)
 void sleepDisplay();
 

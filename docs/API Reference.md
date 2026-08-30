@@ -359,6 +359,30 @@ updateScreen([]{
 
 ---
 
+### `conditionPanel(cycles)`
+
+Clears accumulated ghosting by flushing the panel with `cycles` black↔white
+full-refresh pairs, leaving it white.
+
+```cpp
+void conditionPanel(uint8_t cycles);
+```
+
+**Why**: the GDEW075T8 accumulates a faint ghost of static regions (the
+frame, fixed labels) under weeks of near-identical full refreshes. Driving
+every pixel through its full range a few times clears the retained charge.
+
+**Cost**: ~9 s per cycle (two ~4.5 s full refreshes). Blocking.
+
+**Usage**: `main.cpp` calls this from `maybeConditionPanel()` right before
+`drawDashboard()` — every `DISPLAY_CONDITION_INTERVAL_SEC` worth of redraws
+(counter-based, so no valid clock is needed) and, when
+`DISPLAY_CONDITION_ON_COLD_BOOT` is set, once per cold boot. The dashboard
+is then drawn over the cleared panel, so the visible result is unchanged.
+All three knobs are in `config.h`.
+
+---
+
 ### `sleepDisplay()`
 
 Powers off the display and puts it into hibernation mode to save energy.

@@ -56,6 +56,26 @@
 #define DISPLAY_RESET_PULSE_MS  10UL // hardware reset pulse width, and GxEPD2's own internal reset duration
 #define DISPLAY_BORDER_OFFSET   1   // pixels from the physical screen edge to the outer border rectangle
 
+// ---- Anti-ghosting conditioning ----
+// The GDEW075T8 panel accumulates a faint "ghost" of static content
+// (the frame, fixed labels) under a long run of near-identical full
+// refreshes -- visible after weeks of continuous operation, worse when
+// the panel runs warm. conditionPanel() (display_manager) flushes it
+// with a few black<->white full-refresh cycles; main.cpp runs that
+// before drawing the dashboard over it, so the end result on screen is
+// unchanged.
+//
+// Counter-based, not clock-based: the flush fires every
+// DISPLAY_CONDITION_INTERVAL_SEC worth of redraws, computed against
+// DEEP_SLEEP_INTERVAL_SEC (the timer-wake cadence). Survives deep sleep,
+// no dependency on a valid NTP time.
+#define DISPLAY_CONDITION_INTERVAL_SEC (12UL * 60UL * 60UL) // ~12 h between flushes
+#define DISPLAY_CONDITION_CYCLES        3   // black+white pairs per flush (each half is one ~4.5 s full refresh)
+// 1 = also flush once on every cold boot / reset (not on deep-sleep
+// wakes), for a clean baseline after a power-on -- costs ~30 s and a few
+// extra full refreshes that boot. 0 = only the interval above.
+#define DISPLAY_CONDITION_ON_COLD_BOOT  1
+
 // ===== Header Layout =====
 // Single line: the title stays on the left while WiFi status and firmware
 // version are right-aligned on HEADER_TITLE_Y. The clock lives in the bottom-right quadrant instead

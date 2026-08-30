@@ -14,6 +14,7 @@
 #include "as3935_lightning.h"
 #include "screen_ruler.h"
 #include <time.h>
+#include <esp_sleep.h>
 
 static void goToSleep()
 {
@@ -37,6 +38,36 @@ static bool isRedrawDue()
 {
   time_t now = time(nullptr);
   return (now - lastDrawEpoch) >= (time_t)DEEP_SLEEP_INTERVAL_SEC;
+}
+
+// Redraws counted since the last anti-ghosting flush. RTC_DATA_ATTR so it
+// survives deep sleep; a power cycle resets it, which also restarts the
+// ~12 h schedule from that boot -- acceptable drift.
+static RTC_DATA_ATTR uint32_t redrawsSinceCondition = 0;
+
+// Flush the e-paper's accumulated ghosting before the dashboard is drawn
+// over it: every DISPLAY_CONDITION_INTERVAL_SEC worth of redraws, and
+// (when DISPLAY_CONDITION_ON_COLD_BOOT) once per cold boot / reset.
+// Counter-based so it needs no valid wall-clock time. Call with the
+// display already initialized.
+static void maybeConditionPanel()
+{
+  const uint32_t conditionEveryN = DISPLAY_CONDITION_INTERVAL_SEC / DEEP_SLEEP_INTERVAL_SEC;
+  bool scheduleDue   = redrawsSinceCondition >= conditionEveryN;
+  bool coldBootFlush = DISPLAY_CONDITION_ON_COLD_BOOT &&
+                       esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_UNDEFINED;
+
+  if (scheduleDue || coldBootFlush)
+  {
+    DEBUG_PRINT("Conditioning e-paper (anti-ghosting flush) -- ");
+    DEBUG_PRINTLN(coldBootFlush ? "cold boot" : "interval reached");
+    conditionPanel(DISPLAY_CONDITION_CYCLES);
+    redrawsSinceCondition = 0;
+  }
+  else
+  {
+    redrawsSinceCondition++;
+  }
 }
 
 void setup()
@@ -125,6 +156,10 @@ void setup()
 
   // News carousel rotates every screen redraw, not just every sync window.
   advanceNewsCarousel();
+
+  // Anti-ghosting flush on schedule / cold boot, before the dashboard is
+  // drawn over the cleared panel.
+  maybeConditionPanel();
 
   // Draw dashboard
   uint32_t drawStartMs = millis();

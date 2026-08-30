@@ -20,6 +20,7 @@ Firmware project for a dashboard on a Waveshare 7.5" e-paper display, driven by 
 - **Compile‑time language switch** – Change `#define APP_LANGUAGE LANG_PT_BR` to `LANG_EN` in `config.h` (or pass `-D APP_LANGUAGE=LANG_EN`) to switch all UI strings without touching code.
 - **String catalog** – All user‑facing strings live in `include/strings.h` with separate blocks for Portuguese and English (weekdays, months, labels, warnings, etc.).
 - **Power management** – After screen update the ESP32‑S3 enters deep sleep drawing ~5‑10 µA; Wi‑Fi is only powered on when a sync window is due (NTP resync every hour).
+- **Anti-ghosting conditioning** – Every ~12 h of redraws (and once per cold boot), the panel is flushed with a few black↔white full-refresh cycles before the dashboard is drawn, to clear the ghosting the GDEW075T8 accumulates in static regions over weeks of continuous use. Tunable via `DISPLAY_CONDITION_*` in `config.h`; see `docs/API Reference.md`.
 
 ## Docs Structure
 

@@ -225,6 +225,20 @@ void updateScreen(DrawFunction drawFunc)
   while (display.nextPage());
 }
 
+void conditionPanel(uint8_t cycles)
+{
+  // clearScreen() writes the value to controller memory and does a full
+  // refresh: 0x00 = all pixels black, 0xFF = all pixels white. Driving
+  // the panel fully both ways a few times exercises every pixel through
+  // its whole range and clears retained charge that a run of similar
+  // images leaves behind.
+  for (uint8_t i = 0; i < cycles; i++)
+  {
+    display.clearScreen(0x00);
+    display.clearScreen(0xFF);
+  }
+}
+
 void sleepDisplay()
 {
   DEBUG_PRINTLN("sleepDisplay: powering off display...");
