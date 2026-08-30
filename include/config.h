@@ -102,6 +102,45 @@
 // is ever swapped for a different physical unit.
 #define AS3935_TUNE_CAP     0
 
+// ---- AS3935 detection sensitivity ----
+// The chip powers on with every noise-rejection knob at its most
+// permissive setting, and the SparkFun library never changes them. Left
+// that way, a single indoor electrical transient (a brushed motor, an
+// SMPS, a car ignition nearby) is enough to raise a LIGHTNING interrupt.
+// A full hour of monitoring under a clear sky logged 31 such "strikes"
+// in two bursts, distance marching 10 km -> 1 km with energy up to
+// ~500000 -- the classic signature of local interference, not weather.
+// These override the power-on defaults in initAs3935().
+//
+// AS3935_MIN_STRIKES: confirmed strikes the chip must see within its
+// ~17-minute internal window before it fires the interrupt. Only 1, 5, 9
+// or 16 are valid. 5 discards a lone transient while still catching a
+// real storm (which produces strikes continuously) with little delay.
+#define AS3935_MIN_STRIKES         5
+// AS3935_WATCHDOG_THRESHOLD (0-10) and AS3935_SPIKE_REJECTION (0-11):
+// higher rejects more non-lightning waveforms, at the cost of also
+// missing weak/distant real strikes. One step above the power-on 2 each,
+// a conservative first tightening -- raise further if false strikes
+// persist, lower toward the defaults if real nearby storms get missed.
+#define AS3935_WATCHDOG_THRESHOLD  3
+#define AS3935_SPIKE_REJECTION     3
+// AS3935_NOISE_LEVEL (1-7): the chip's noise-floor reference; higher
+// tolerates a noisier RF environment before raising NOISE_TOO_HIGH.
+// Kept at the power-on 2 -- monitoring logged zero NOISE_TOO_HIGH
+// events, so the noise floor is not the problem here.
+#define AS3935_NOISE_LEVEL         2
+
+// Firmware-side backstop, applied in onConfirmedLightningStrike(): the
+// chip reports distance as a running minimum over its event window, so
+// one strong local transient pins it at 1 km and later events hold it
+// there. A confirmed "strike" at or inside this distance whose energy
+// exceeds AS3935_OVERHEAD_MAX_PLAUSIBLE_ENERGY is discarded rather than
+// counted -- real overhead strikes on this sensor read energy ~17000,
+// far below this ceiling. Set the energy ceiling to 0 to disable the
+// check.
+#define AS3935_OVERHEAD_SANITY_KM             1
+#define AS3935_OVERHEAD_MAX_PLAUSIBLE_ENERGY  200000UL
+
 // ===== Content Feature Flags =====
 #define FEATURE_WEATHER_ENABLED 1
 #define FEATURE_NEWS_ENABLED    1

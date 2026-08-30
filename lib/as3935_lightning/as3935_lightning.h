@@ -14,8 +14,9 @@
 bool beginAs3935Bus();
 
 // Full initialization: brings up the bus (as beginAs3935Bus()) and then
-// writes the sensor configuration (indoor mode, antenna tuning,
-// oscillator calibration, disturber masking). Call from a cold boot or a
+// writes the sensor configuration (indoor mode, noise-rejection
+// thresholds, antenna tuning, oscillator calibration, disturber
+// masking). Call from a cold boot or a
 // timer wake -- never from an IRQ wake, where writing REG0x03 would
 // consume an unread strike interrupt. Returns true if the sensor is
 // present.
@@ -36,6 +37,14 @@ bool readAs3935(int* lightningKmOut, uint32_t* energyOut);
 // of collapsing everything to lightning-or-not. lightningKmOut/energyOut
 // behave exactly as in readAs3935().
 uint8_t readAs3935Diagnostic(int* lightningKmOut, uint32_t* energyOut);
+
+// Diagnostic: reads back and prints (via DEBUG_*) the AS3935's current
+// configuration registers -- indoor/outdoor, watchdog threshold, noise
+// floor, spike rejection, minimum-lightning count, disturber mask and
+// tune cap. Used by the as3935_monitor test environment to characterize
+// how permissive the current detection settings are; not called by the
+// production firmware. No-op if the sensor isn't present.
+void dumpAs3935Config();
 
 // Arms the AS3935's IRQ pin as an ext1 deep-sleep wakeup source. Call
 // once, right before esp_deep_sleep_start() -- deep sleep resets

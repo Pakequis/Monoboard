@@ -127,6 +127,24 @@ static void resetStrikeStateIfStale()
 
 void onConfirmedLightningStrike(int km, uint32_t energy)
 {
+  // Firmware-side backstop for local interference the sensor still lets
+  // through as LIGHTNING: the AS3935 reports distance as a running
+  // minimum over its event window, so one strong nearby transient pins
+  // it at 1 km and holds it there. Drop a "strike" that claims to be
+  // overhead yet carries energy no real overhead strike on this sensor
+  // has shown (those read ~17000). AS3935_OVERHEAD_MAX_PLAUSIBLE_ENERGY
+  // == 0 disables the check.
+  if (AS3935_OVERHEAD_MAX_PLAUSIBLE_ENERGY != 0 &&
+      km >= 0 && km <= AS3935_OVERHEAD_SANITY_KM &&
+      energy > AS3935_OVERHEAD_MAX_PLAUSIBLE_ENERGY)
+  {
+    DEBUG_PRINT("Lightning strike rejected (implausible overhead energy): ");
+    DEBUG_PRINT(km);
+    DEBUG_PRINT("km, energy=");
+    DEBUG_PRINTLN(energy);
+    return;
+  }
+
   resetStrikeStateIfStale();
 
   strikeHistoryKm[strikeHistoryIndex] = (uint8_t)km;

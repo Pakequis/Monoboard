@@ -26,6 +26,15 @@ bool initAs3935()
   }
 
   lightning.setIndoorOutdoor(INDOOR);
+  // Tighten the noise-rejection knobs away from the chip's permissive
+  // power-on defaults (see the AS3935 detection sensitivity block in
+  // config.h). The SparkFun library never touches these, so without
+  // these calls they stay at watchdog=2 / spike=2 / min-strikes=1, which
+  // logged 31 false "strikes" in an hour under a clear sky.
+  lightning.watchdogThreshold(AS3935_WATCHDOG_THRESHOLD);
+  lightning.spikeRejection(AS3935_SPIKE_REJECTION);
+  lightning.setNoiseLevel(AS3935_NOISE_LEVEL);
+  lightning.lightningThreshold(AS3935_MIN_STRIKES);
   // AS3935_TUNE_CAP (config.h) was measured once via an IRQ-pin pulse-count
   // sweep across all 16 steps -- 0pF was already the closest to the
   // 500kHz antenna target (496480Hz, 0.7% off), so no extra capacitance
@@ -82,6 +91,35 @@ bool readAs3935(int* lightningKmOut, uint32_t* energyOut)
 
   readAs3935Diagnostic(lightningKmOut, energyOut);
   return true;
+}
+
+void dumpAs3935Config()
+{
+  if (!sensorPresent)
+  {
+    DEBUG_PRINTLN("dumpAs3935Config: AS3935 not present");
+    return;
+  }
+
+  // Register readbacks, not the config.h constants -- this shows what the
+  // chip is actually running, including any power-on default left in
+  // place. watchdogThreshold (0-10) and spikeRejection (0-11): higher =
+  // more aggressive rejection of non-lightning waveforms. lightning
+  // threshold: min strikes (1/5/9/16) before a LIGHTNING interrupt fires.
+  DEBUG_PRINT("AS3935 indoorOutdoor (0x12=indoor,0x0E=outdoor): 0x");
+  DEBUG_PRINTLN(lightning.readIndoorOutdoor(), HEX);
+  DEBUG_PRINT("AS3935 watchdogThreshold (0-10): ");
+  DEBUG_PRINTLN(lightning.readWatchdogThreshold());
+  DEBUG_PRINT("AS3935 noiseLevel (1-7): ");
+  DEBUG_PRINTLN(lightning.readNoiseLevel());
+  DEBUG_PRINT("AS3935 spikeRejection (0-11): ");
+  DEBUG_PRINTLN(lightning.readSpikeRejection());
+  DEBUG_PRINT("AS3935 lightningThreshold (min strikes 1/5/9/16): ");
+  DEBUG_PRINTLN(lightning.readLightningThreshold());
+  DEBUG_PRINT("AS3935 maskDisturber (1=disturbers suppressed): ");
+  DEBUG_PRINTLN(lightning.readMaskDisturber());
+  DEBUG_PRINT("AS3935 tuneCap register (0-15, x8pF): ");
+  DEBUG_PRINTLN(lightning.readTuneCap());
 }
 
 void armAs3935IrqWakeup()
