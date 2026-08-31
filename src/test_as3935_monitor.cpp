@@ -20,17 +20,40 @@
   Runs indefinitely; prints a heartbeat with running counts every
   MONITOR_HEARTBEAT_MS so a quiet stretch is distinguishable from a hung
   board. Analyzed by eye, off-device.
+
+  Flash logging: every HEARTBEAT line and every non-NOISE event
+  (LIGHTNING / DISTURBER / UNCLASSIFIED) is also appended to a file on
+  the on-chip LittleFS partition, so the board can be left running on a
+  bare USB charger with no host attached and the record read back later.
+  Individual NOISE_TOO_HIGH lines are kept on serial only -- the 60 s
+  heartbeat already carries their running total, so persisting each one
+  would just wear the flash. On boot the existing file is streamed to
+  serial (wrapped in FLASHLOG markers) before new lines are appended, and
+  the file is never truncated, so it accumulates across power cycles. A
+  boot counter in NVS labels each power-on segment since millis() resets
+  with it.
 */
 
 #include "config.h"
 #include "debug.h"
 #include "as3935_lightning.h"
 #include <Arduino.h>
+#include <LittleFS.h>
+#include <Preferences.h>
 
 namespace
 {
 
 constexpr unsigned long MONITOR_HEARTBEAT_MS = 60000UL;
+
+// Path of the persistent event log on the LittleFS ("spiffs" subtype)
+// partition. Stop appending once free space drops below the reserve so a
+// full filesystem degrades to "serial only" instead of thrashing failed
+// writes.
+constexpr const char* FLASH_LOG_PATH = "/as3935.log";
+constexpr size_t FLASH_LOG_MIN_FREE = 24u * 1024u;
+
+bool g_flashReady = false;
 
 volatile bool g_irqFlag = false;
 
@@ -43,6 +66,55 @@ void IRAM_ATTR onAs3935Irq()
 {
   g_irqFlag = true;
 }
+
+// Append one line to the flash log, opening and closing the file each
+// call -- the event rate is low (a heartbeat a minute plus real strikes)
+// and a file left open across a yanked-power event is the main way
+// LittleFS corrupts.
+void appendFlashLog(const char* line)
+{
+  if (!g_flashReady)
+  {
+    return;
+  }
+  if (LittleFS.totalBytes() - LittleFS.usedBytes() < FLASH_LOG_MIN_FREE)
+  {
+    return;
+  }
+  File f = LittleFS.open(FLASH_LOG_PATH, "a");
+  if (!f)
+  {
+    return;
+  }
+  f.println(line);
+  f.close();
+}
+
+#if APP_DEBUG_SERIAL
+// Stream whatever the flash log already holds (possibly several past
+// power-on segments) to serial, wrapped in markers a capture script can
+// bracket on.
+void dumpFlashLog()
+{
+  DEBUG_PRINTLN("----- FLASHLOG DUMP START -----");
+  File f = LittleFS.open(FLASH_LOG_PATH, "r");
+  if (f)
+  {
+    while (f.available())
+    {
+      Serial.write(f.read());
+    }
+    f.close();
+  }
+  else
+  {
+    DEBUG_PRINTLN("(no flash log yet)");
+  }
+  DEBUG_PRINTLN("----- FLASHLOG DUMP END -----");
+}
+#else
+void dumpFlashLog() {}
+#endif
 
 void serviceEvent()
 {
@@ -61,30 +133,28 @@ void serviceEvent()
     default:   g_unclassified++;                            break;
   }
 
-  DEBUG_PRINT("EVENT,");
-  DEBUG_PRINT(millis());
-  DEBUG_PRINT(",");
-  DEBUG_PRINT(label);
-  DEBUG_PRINT(",raw=0x");
-  DEBUG_PRINT(raw, HEX);
-  DEBUG_PRINT(",km=");
-  DEBUG_PRINT(lightningKm);
-  DEBUG_PRINT(",energy=");
-  DEBUG_PRINTLN(energy);
+  char buf[96];
+  snprintf(buf, sizeof(buf), "EVENT,%lu,%s,raw=0x%X,km=%d,energy=%lu",
+           millis(), label, raw, lightningKm, (unsigned long)energy);
+  DEBUG_PRINTLN(buf);
+
+  // NOISE_TOO_HIGH is the running total in every heartbeat already; only
+  // the events that matter go to flash, in full.
+  if (raw != 0x01)
+  {
+    appendFlashLog(buf);
+  }
 }
 
 void printHeartbeat()
 {
-  DEBUG_PRINT("HEARTBEAT,");
-  DEBUG_PRINT(millis());
-  DEBUG_PRINT(",noise=");
-  DEBUG_PRINT(g_noiseTooHigh);
-  DEBUG_PRINT(",disturber=");
-  DEBUG_PRINT(g_disturber);
-  DEBUG_PRINT(",lightning=");
-  DEBUG_PRINT(g_lightning);
-  DEBUG_PRINT(",unclassified=");
-  DEBUG_PRINTLN(g_unclassified);
+  char buf[96];
+  snprintf(buf, sizeof(buf),
+           "HEARTBEAT,%lu,noise=%lu,disturber=%lu,lightning=%lu,unclassified=%lu",
+           millis(), (unsigned long)g_noiseTooHigh, (unsigned long)g_disturber,
+           (unsigned long)g_lightning, (unsigned long)g_unclassified);
+  DEBUG_PRINTLN(buf);
+  appendFlashLog(buf);
 }
 
 } // namespace
@@ -97,6 +167,25 @@ void setup()
   DEBUG_PRINTLN("========================================");
   DEBUG_PRINTLN("AS3935 event monitor -- boot");
   DEBUG_PRINTLN("========================================");
+
+  g_flashReady = LittleFS.begin(true); // format on first use / corruption
+  DEBUG_PRINT("LittleFS mount: ");
+  DEBUG_PRINTLN(g_flashReady ? "ok" : "FAILED -- serial-only this run");
+
+  // Per-power-on segment marker: millis() restarts from zero every boot,
+  // so without this the flash log's segments can't be told apart.
+  uint32_t bootCount = 0;
+  {
+    Preferences prefs;
+    if (prefs.begin("as3935mon", false))
+    {
+      bootCount = prefs.getUInt("boot", 0) + 1;
+      prefs.putUInt("boot", bootCount);
+      prefs.end();
+    }
+  }
+
+  dumpFlashLog();
 
   bool present = false;
   for (int attempt = 1; attempt <= 10 && !present; attempt++)
@@ -115,6 +204,16 @@ void setup()
   dumpAs3935Config();
   DEBUG_PRINTLN("----------------------------------------");
   DEBUG_PRINTLN("EVENT,millis,class,raw,km,energy");
+
+  // Flash-log segment header: the compiled sensitivity constants (the
+  // live register readback goes to serial via dumpAs3935Config above).
+  char buf[160];
+  snprintf(buf, sizeof(buf),
+           "==== BOOT %lu, present=%d, wdth=%d nf=%d srej=%d minstk=%d mask=1 cap=%d ====",
+           (unsigned long)bootCount, present ? 1 : 0,
+           AS3935_WATCHDOG_THRESHOLD, AS3935_NOISE_LEVEL, AS3935_SPIKE_REJECTION,
+           AS3935_MIN_STRIKES, AS3935_TUNE_CAP);
+  appendFlashLog(buf);
 
   pinMode(PIN_AS3935_IRQ, INPUT);
   attachInterrupt(digitalPinToInterrupt(PIN_AS3935_IRQ), onAs3935Irq, RISING);
