@@ -148,19 +148,40 @@
 // ~17-minute internal window before it fires the interrupt. Only 1, 5, 9
 // or 16 are valid. 5 discards a lone transient while still catching a
 // real storm (which produces strikes continuously) with little delay.
+//
+// The three knobs below are wrapped in #ifndef so a diagnostic build can
+// override them from the command line (see [env:as3935_monitor_loose] in
+// platformio.ini) without editing this file; the production firmware
+// takes the values here.
+#ifndef AS3935_MIN_STRIKES
 #define AS3935_MIN_STRIKES         5
+#endif
 // AS3935_WATCHDOG_THRESHOLD (0-10) and AS3935_SPIKE_REJECTION (0-11):
 // higher rejects more non-lightning waveforms, at the cost of also
 // missing weak/distant real strikes. One step above the power-on 2 each,
 // a conservative first tightening -- raise further if false strikes
 // persist, lower toward the defaults if real nearby storms get missed.
+#ifndef AS3935_WATCHDOG_THRESHOLD
 #define AS3935_WATCHDOG_THRESHOLD  3
+#endif
+#ifndef AS3935_SPIKE_REJECTION
 #define AS3935_SPIKE_REJECTION     3
+#endif
 // AS3935_NOISE_LEVEL (1-7): the chip's noise-floor reference; higher
 // tolerates a noisier RF environment before raising NOISE_TOO_HIGH.
 // Kept at the power-on 2 -- monitoring logged zero NOISE_TOO_HIGH
 // events, so the noise floor is not the problem here.
 #define AS3935_NOISE_LEVEL         2
+
+// AS3935_MASK_DISTURBER: 1 (default) tells the chip to suppress the IRQ
+// for events it classifies as disturbers -- essential for the production
+// firmware, where that pin is the deep-sleep wake source and a disturber
+// storm would otherwise re-wake the board forever. A diagnostic build can
+// set this to 0 to log the disturber rate and check whether real distant
+// strikes are being classified as disturbers and lost.
+#ifndef AS3935_MASK_DISTURBER
+#define AS3935_MASK_DISTURBER      1
+#endif
 
 // Firmware-side backstop, applied in onConfirmedLightningStrike(): the
 // chip reports distance as a running minimum over its event window, so

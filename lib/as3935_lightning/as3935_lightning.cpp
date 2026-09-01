@@ -57,7 +57,10 @@ bool initAs3935()
   // it has to read the strike interrupt before any such write consumes
   // it. Safe to write here because initAs3935() only runs on a cold boot
   // or a timer wake, when no unread strike interrupt is pending.
-  lightning.maskDisturber(true);
+  //
+  // AS3935_MASK_DISTURBER (config.h) is 1 for the production firmware; a
+  // diagnostic build can set it to 0 to observe the disturber rate.
+  lightning.maskDisturber(AS3935_MASK_DISTURBER != 0);
   return true;
 }
 

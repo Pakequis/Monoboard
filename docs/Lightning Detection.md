@@ -173,18 +173,33 @@ Leading hypotheses, most likely first:
 
 ### Plan for the next storm
 
-Re-run `as3935_monitor` during the next thunderstorm with the
-noise-rejection knobs loosened, to see how many more strikes the chip
-reports and whether interference returns:
+Re-run the monitor during the next thunderstorm with the noise-rejection
+knobs loosened, to see how many more strikes the chip reports and whether
+interference returns. The `[env:as3935_monitor_loose]` PlatformIO
+environment is prepared for exactly this — it is `as3935_monitor` plus
+command-line overrides:
 
-- `AS3935_MIN_STRIKES` 5 → 1
-- `AS3935_WATCHDOG_THRESHOLD` 3 → 2
-- `AS3935_SPIKE_REJECTION` 3 → 2
-- optionally `maskDisturber(false)` to see the disturber rate
+| Knob | Normal | Loose env |
+|---|---|---|
+| `AS3935_MIN_STRIKES` | 5 | 1 |
+| `AS3935_WATCHDOG_THRESHOLD` | 3 | 2 |
+| `AS3935_SPIKE_REJECTION` | 3 | 2 |
+| disturber mask | on | **off** (rate visible) |
 
-Compare the `LIGHTNING` count and the `NOISE_TOO_HIGH` / `DISTURBER`
-rates against this run before deciding which loosening to keep in
-`config.h`.
+The three `config.h` knobs are wrapped in `#ifndef` and the mask is the
+`AS3935_MASK_DISTURBER` define, so the loose build changes nothing in
+`config.h` and the production firmware is unaffected.
+
+```sh
+pio run -e as3935_monitor_loose -t upload   # binary is pre-built; this just flashes
+```
+
+Then leave the board on a bare USB charger (no host — a host raises the
+noise rate) for the duration of the storm and read `/as3935.log` back
+afterwards. Compare the `LIGHTNING` count and the `NOISE_TOO_HIGH` /
+`DISTURBER` rates against the 2026-08-31 run before deciding which
+loosening to fold into `config.h`. Flash `esp32-s3-devkitc-1` to return
+to the production firmware.
 
 ## Files
 
