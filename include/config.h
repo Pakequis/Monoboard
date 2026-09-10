@@ -173,6 +173,32 @@
 // events, so the noise floor is not the problem here.
 #define AS3935_NOISE_LEVEL         2
 
+// AS3935 analog front-end gain: INDOOR (register 0x12, gain boost 18) or
+// OUTDOOR (0x0E, gain 14). The chip powers on INDOOR and SparkFun keeps
+// it there; this project overrides it to OUTDOOR.
+//
+// INDOOR's higher gain is meant for signals attenuated by a building,
+// but at this sensor's location it overdrives the front end: local EM
+// interference saturates the AFE, the chip's automatic noise floor backs
+// off, and real sferics come through distorted enough that the
+// signal-verification stage classifies them as DISTURBER (or nothing)
+// rather than LIGHTNING. In INDOOR mode the 2026-08-31 run caught only
+// 8 strikes in ~15 h of storms and three later runs against two more
+// storms with audible thunder caught ZERO between them -- one with every
+// rejection knob at minimum, one with the sensor outside its enclosure
+// -- while emitting 30-115 disturbers/min. The same board, same
+// placement, switched to OUTDOOR mid-storm registered 66 LIGHTNING
+// events in 14 minutes (km 6 -> 1 as the cell closed, energy 8k-480k)
+// with only ~1.7 disturbers/min. See docs/Lightning Detection.md, the
+// 2026-09-09 run.
+//
+// Wrapped in #ifndef so a diagnostic build can override it (the
+// [env:as3935_monitor_outdoor] PlatformIO env forces OUTDOOR on top of
+// the loosened knobs; nothing currently forces INDOOR).
+#ifndef AS3935_INDOOR_OUTDOOR
+#define AS3935_INDOOR_OUTDOOR      OUTDOOR
+#endif
+
 // AS3935_MASK_DISTURBER: 1 (default) tells the chip to suppress the IRQ
 // for events it classifies as disturbers -- essential for the production
 // firmware, where that pin is the deep-sleep wake source and a disturber
@@ -188,11 +214,21 @@
 // one strong local transient pins it at 1 km and later events hold it
 // there. A confirmed "strike" at or inside this distance whose energy
 // exceeds AS3935_OVERHEAD_MAX_PLAUSIBLE_ENERGY is discarded rather than
-// counted -- real overhead strikes on this sensor read energy ~17000,
-// far below this ceiling. Set the energy ceiling to 0 to disable the
-// check.
+// counted. Set the energy ceiling to 0 to disable the check.
+//
+// The ceiling is 550000 -- just above the highest energy any real strike
+// has produced on this sensor in OUTDOOR mode (503121, measured over 331
+// strikes across two storms; see docs/Lightning Detection.md, the
+// 2026-09-10 run). That makes the guard nearly inert: it fires only on a
+// reading past anything a genuine close strike has ever registered. It is
+// kept rather than removed as cheap insurance, because the original
+// interference signature it was built for -- a local source pinning the
+// distance at 1 km with very high energy -- was characterised in INDOOR
+// mode and no clear-sky OUTDOOR baseline has been captured to confirm
+// OUTDOOR gain eliminated it. An earlier 200000 ceiling (from INDOOR-era
+// data) was discarding about 4% of real close strikes.
 #define AS3935_OVERHEAD_SANITY_KM             1
-#define AS3935_OVERHEAD_MAX_PLAUSIBLE_ENERGY  200000UL
+#define AS3935_OVERHEAD_MAX_PLAUSIBLE_ENERGY  550000UL
 
 // ===== Content Feature Flags =====
 #define FEATURE_WEATHER_ENABLED 1
@@ -311,11 +347,16 @@
 // pure value that doesn't have any physical meaning") -- these only pick
 // the strike ring's thickness tier (thin/medium/thick), nothing else.
 // The proximity alert is distance-only (LIGHTNING_ALERT_KM above), not
-// energy-gated: real overhead strikes were observed at energy ~17000,
-// far below HIGH. Still a rough guess for the thickness tiers -- retune
-// once more real samples across a range of distances are collected.
-#define LIGHTNING_ENERGY_MEDIUM_THRESHOLD  50000UL
-#define LIGHTNING_ENERGY_HIGH_THRESHOLD    300000UL
+// energy-gated.
+//
+// Tiers set against the measured OUTDOOR-mode distribution of 331 real
+// strikes across two storms (median ~20000, p90 ~63000, p95 ~89000, max
+// ~503000; see docs/Lightning Detection.md, the 2026-09-10 run): MEDIUM
+// ~= the 70th percentile, HIGH ~= the 95th, so the tiers land roughly
+// 70% thin / 25% medium / 5% thick. Higher-gain (INDOOR) readings run
+// much lower, so re-tune both if the front-end gain ever changes back.
+#define LIGHTNING_ENERGY_MEDIUM_THRESHOLD  30000UL
+#define LIGHTNING_ENERGY_HIGH_THRESHOLD    90000UL
 
 // ---- Lightning rate: strikes in the trailing LIGHTNING_RATE_WINDOW_SEC ----
 // Shown in the header instead of a since-last-reset cumulative count --

@@ -25,7 +25,7 @@ bool initAs3935()
     return false;
   }
 
-  lightning.setIndoorOutdoor(INDOOR);
+  lightning.setIndoorOutdoor(AS3935_INDOOR_OUTDOOR);
   // Tighten the noise-rejection knobs away from the chip's permissive
   // power-on defaults (see the AS3935 detection sensitivity block in
   // config.h). The SparkFun library never touches these, so without
