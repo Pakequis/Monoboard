@@ -19,11 +19,11 @@ Dimensions in millimetres, drawings to scale within each diagram.
 
 ### Piece A: top/bottom, 163 × 44 × 13 (×2)
 
-![Piece A drawing: 163 x 44 x 13 mm plan and end views](../images/enclosure-piece-a.svg)
+<img src="../images/enclosure-piece-a.svg" alt="Piece A drawing: 163 x 44 x 13 mm plan and end views" width="600">
 
 ### Piece B: sides, 125 × 44 × 13 (×2)
 
-![Piece B drawing: 125 x 44 x 13 mm plan and end views](../images/enclosure-piece-b.svg)
+<img src="../images/enclosure-piece-b.svg" alt="Piece B drawing: 125 x 44 x 13 mm plan and end views" width="600">
 
 ## Assembly
 
