@@ -1,0 +1,32 @@
+<svg width="271" height="74" viewBox="0 0 271 74" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow-a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#b23b2e"></path>
+    </marker>
+  </defs>
+  <g stroke="#ddd0b8" stroke-width="0.4">
+    <path d="M25,0 V74 M35,0 V74 M45,0 V74 M55,0 V74 M65,0 V74 M75,0 V74 M85,0 V74 M95,0 V74 M105,0 V74 M115,0 V74 M125,0 V74 M135,0 V74 M145,0 V74 M155,0 V74 M165,0 V74 M175,0 V74 M188,0 V74"></path>
+  </g>
+  <!-- plan view: 163 x 44 -->
+  <rect x="25" y="20" width="163" height="44" fill="#ecd9b6" stroke="#2b2115" stroke-width="1"></rect>
+  <!-- length dim -->
+  <line x1="25" y1="12" x2="188" y2="12" stroke="#b23b2e" stroke-width="0.8" marker-start="url(#arrow-a)" marker-end="url(#arrow-a)"></line>
+  <line x1="25" y1="8" x2="25" y2="20" stroke="#b23b2e" stroke-width="0.5"></line>
+  <line x1="188" y1="8" x2="188" y2="20" stroke="#b23b2e" stroke-width="0.5"></line>
+  <rect x="93" y="6" width="26" height="9" fill="#fffdf7"></rect>
+  <text x="106" y="13" font-size="7" fill="#b23b2e" text-anchor="middle">163</text>
+  <!-- width dim -->
+  <line x1="15" y1="20" x2="15" y2="64" stroke="#b23b2e" stroke-width="0.8" marker-start="url(#arrow-a)" marker-end="url(#arrow-a)"></line>
+  <line x1="10" y1="20" x2="25" y2="20" stroke="#b23b2e" stroke-width="0.5"></line>
+  <line x1="10" y1="64" x2="25" y2="64" stroke="#b23b2e" stroke-width="0.5"></line>
+  <rect x="7" y="37" width="16" height="9" fill="#fffdf7"></rect>
+  <text x="15" y="44" font-size="7" fill="#b23b2e" text-anchor="middle">44</text>
+  <!-- end view: 13 x 44 -->
+  <rect x="216" y="20" width="13" height="44" fill="#c1873f" stroke="#2b2115" stroke-width="1"></rect>
+  <line x1="216" y1="12" x2="229" y2="12" stroke="#b23b2e" stroke-width="0.8" marker-start="url(#arrow-a)" marker-end="url(#arrow-a)"></line>
+  <line x1="216" y1="8" x2="216" y2="20" stroke="#b23b2e" stroke-width="0.5"></line>
+  <line x1="229" y1="8" x2="229" y2="20" stroke="#b23b2e" stroke-width="0.5"></line>
+  <rect x="211" y="5" width="24" height="9" fill="#fffdf7"></rect>
+  <text x="223" y="12" font-size="7" fill="#b23b2e" text-anchor="middle">13</text>
+  <text x="223" y="72" font-size="6" fill="#6b5c47" text-anchor="middle">section</text>
+</svg>
