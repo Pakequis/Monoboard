@@ -3,7 +3,7 @@
 > **Nota**: primeira sessão do estudo. Objetivo: viabilizar
 > alimentar o circuito por uma bateria de Li-ion de 2500mAh, com leitura
 > de tensão da bateria pelo ADC do ESP32-S3, e estimar quantos dias a
-> bateria duraria. Discussão ainda em andamento -- este documento registra
+> bateria duraria. Discussão ainda em andamento. Este documento registra
 > o que já foi medido/decidido para continuar em outra sessão.
 
 ## Objetivo
@@ -20,11 +20,11 @@
 - Board real: **ESP32-S3-DevKitC-1**, sem circuito de carga/BMS onboard
   (não é um board tipo Feather/LiPo).
 - Bridge USB-serial onboard é um chip **WCH** ("USB Single Serial",
-  VID:PID `1A86:55D3`), aparece como `/dev/ttyACM0` no Linux -- não é um
+  VID:PID `1A86:55D3`), aparece como `/dev/ttyACM0` no Linux, não é um
   CH340 clássico, mas mesma categoria (chip separado do ESP32-S3,
   alimentado pelo mesmo trilho de 3.3V/5V USB).
 - Pinos ADC1 livres nesta placa (evitando os já usados: display
-  4/10/11/12/16/17; sensores/botão 1/2/6/8/9; ver `Pin Mapping.md`):
+  4/10/11/12/16/17, sensores/botão 1/2/6/8/9, ver `Pin Mapping.md`):
   candidatos incluem **GPIO5** (recomendado) e GPIO7. ADC2 (GPIO11-20)
   foi descartado porque compartilha circuito com o rádio WiFi, que este
   projeto usa ativamente antes de dormir.
@@ -37,13 +37,13 @@
 |---|---|
 | WiFi ligado | ~0,2 A |
 | Atualização normal (sem WiFi, a cada 60s) | ~0,03 A |
-| Deep sleep | <0,01 A (piso de resolução do medidor -- não sabemos o valor real) |
+| Deep sleep | <0,01 A (piso de resolução do medidor, não sabemos o valor real) |
 
 Importante: essa medição é *inline no cabo USB* (lado 5V/VBUS, antes do
 LDO onboard), então o valor de sleep já inclui LDO + chip USB-serial +
 ESP32-S3 somados. Isso descarta o cenário pessimista de 10-15mA de fuga
 só da placa (que eu tinha levantado como hipótese antes de medir), mas
-não fecha o valor exato -- ainda falta resolução abaixo de 10mA.
+não fecha o valor exato. Ainda falta resolução abaixo de 10mA.
 
 ### Tempo de cada fase (instrumentação `millis()` adicionada temporariamente em `src/main.cpp` para esta medição, depois revertida)
 
@@ -81,13 +81,13 @@ chutes de duração antes de medir).
 | 1mA (plausível pra devkit) | ~4,36 mAh/h | ~24 dias |
 | 0,5mA (bom caso) | ~3,88 mAh/h | ~27 dias |
 
-O gargalo do cálculo final é só o valor real do sleep -- a parte ativa já
+O gargalo do cálculo final é só o valor real do sleep. A parte ativa já
 está fechada com números medidos.
 
 ## Achado extra: wakes de ruído do AS3935
 
 No teste de bancada, o sensor de raios (AS3935) disparou vários wakes por
-IRQ de "disturber" (ruído, não raio confirmado) -- ~5-6 em ~75s, bem mais
+IRQ de "disturber" (ruído, não raio confirmado), ~5-6 em ~75s, bem mais
 frequente que o wake de 60s do timer. Cada um é curto (não chega a ligar
 display/WiFi), mas se essa taxa se repetir na instalação final (a
 bancada tem bastante ruído eletromagnético de PC/monitor por perto,
@@ -107,7 +107,7 @@ apareça alto.
 ## Próximos passos
 
 1. **Medir o sleep abaixo de 10mA**: checar se o multímetro do usuário
-   tem faixa de µA separada; senão, método do capacitor (carrega um
+   tem faixa de µA separada. Senão, método do capacitor (carrega um
    capacitor grande, desconecta, cronometra a queda de tensão pelo
    voltímetro) ou um módulo INA219/INA226.
 2. Instrumentar e medir a taxa/duração real dos wakes de ruído do AS3935
@@ -120,7 +120,7 @@ apareça alto.
 ## Estado do código
 
 A instrumentação `[TIMING]` (3 linhas de `millis()`) usada para medir as
-fases acima já foi revertida do working tree -- `src/main.cpp` não tem
+fases acima já foi revertida do working tree. `src/main.cpp` não tem
 mais essas linhas. Reintroduzi-la (custo zero em produção, gated pelas
 mesmas macros `DEBUG_PRINTLN`) é um passo rápido se a medição precisar
 ser reproduzida.

@@ -8,8 +8,8 @@
 ## What it does
 
 When `SHOW_SCREEN_RULER` is non-zero, `main.cpp` calls
-`enterScreenRulerMode()` as the very first thing in `setup()` — before the
-IRQ-wake check, before any sensor or WiFi work. That function:
+`enterScreenRulerMode()` as the very first thing in `setup()`, before the
+IRQ-wake check and before any sensor or WiFi work. That function:
 
 1. Initializes the display.
 2. Draws the ruler screen (`updateScreen()`, paged mode, one full refresh).
@@ -24,10 +24,10 @@ flash → let it draw → unplug → use the screen as a stencil.
 
 - **Edge rulers** on all four sides, ticks pointing inward: 1 mm (short),
   5 mm (medium), 1 cm (long, numbered). The top and bottom rulers share an
-  x origin at the left edge; the left and right rulers share a y origin at
+  x origin at the left edge, the left and right rulers share a y origin at
   the top edge.
 - **Title**: `Pakéquis - Screen Measurement Test` (the accented `é` is
-  drawn by hand — the bundled Adafruit GFX fonts carry no Latin-1 glyphs).
+  drawn by hand, the bundled Adafruit GFX fonts carry no Latin-1 glyphs).
 - **Info lines**: calibrated active-area size and `px/cm`.
 - **10 cm calibration bar**, centred, with mm ticks. Lay a real ruler on
   it: it must read 100.0 mm. If it does not, the panel needs re-calibrating
@@ -74,7 +74,7 @@ pio run -e esp32-s3-devkitc-1 -t upload
 ```
 
 The `screen_ruler` env `extends` `esp32-s3-devkitc-1`, so it is the exact
-production build with the flag (and `APP_DEBUG_SERIAL=1`) added — nothing
+production build with the flag (and `APP_DEBUG_SERIAL=1`) added, nothing
 else differs.
 
 `SHOW_SCREEN_RULER` defaults to `0` in `config.h` and is wrapped in
@@ -91,6 +91,6 @@ editing the file (same pattern as `APP_DEBUG_SERIAL`).
 | `src/main.cpp` | `#if SHOW_SCREEN_RULER` branch at the top of `setup()` |
 | `platformio.ini` | `[env:screen_ruler]` |
 
-The drawing code is always compiled into the firmware; the flag only
+The drawing code is always compiled into the firmware. The flag only
 decides whether `main.cpp` reaches it. Its flash cost is negligible
 (production uses ~15% of 6.5 MB).

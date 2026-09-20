@@ -17,7 +17,7 @@ Material: pine. Cuts were guided by the on-screen ruler from `docs/Screen Measur
 
 Dimensions in millimetres, drawings to scale within each diagram.
 
-### Piece A — top/bottom — 163 × 44 × 13 (×2)
+### Piece A: top/bottom, 163 × 44 × 13 (×2)
 
 <svg width="271" height="74" viewBox="0 0 271 74" xmlns="http://www.w3.org/2000/svg">
   <defs>
@@ -52,7 +52,7 @@ Dimensions in millimetres, drawings to scale within each diagram.
   <text x="223" y="72" font-size="6" fill="#6b5c47" text-anchor="middle">section</text>
 </svg>
 
-### Piece B — sides — 125 × 44 × 13 (×2)
+### Piece B: sides, 125 × 44 × 13 (×2)
 
 <svg width="233" height="74" viewBox="0 0 233 74" xmlns="http://www.w3.org/2000/svg">
   <defs>
@@ -88,7 +88,7 @@ Dimensions in millimetres, drawings to scale within each diagram.
 
 ## Assembly
 
-The top rail and the two side rails are glued and nailed together into a fixed U shape. A channel is carved into the inner face of each of these three pieces; the e-paper panel's edges slide into that channel from the open bottom.
+The top rail and the two side rails are glued and nailed together into a fixed U shape. A channel is carved into the inner face of each of these three pieces. The e-paper panel's edges slide into that channel from the open bottom.
 
 The bottom rail is not glued or nailed: it stays loose so the frame can be opened. To assemble, the panel slides down into the channels of the fixed U, then the bottom rail closes underneath to hold it in place.
 
@@ -104,7 +104,7 @@ The channel-cut U frame dry-fit around the panel, using `docs/Screen Measurement
 
 ![U-shaped frame dry-fit around the e-paper panel, screen ruler pattern latched on it](../images/wood-2.JPG)
 
-Wiring inside the closed frame, before the bottom rail goes back on — the Waveshare driver HAT top-left, the DHT22 bottom-left, and the ESP32-S3 header on the right:
+Wiring inside the closed frame, before the bottom rail goes back on: the Waveshare driver HAT top-left, the DHT22 bottom-left, and the ESP32-S3 header on the right.
 
 ![Wiring inside the assembled frame: driver HAT, DHT22 and ESP32-S3 header](../images/inside-1.JPG)
 

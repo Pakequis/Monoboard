@@ -28,7 +28,7 @@ runtime language selection.
 Both language blocks define the exact same set of `STR_*` keys. If a key
 is added to one block and forgotten in the other, any file that uses it
 under the missing language fails to build with an "undeclared identifier"
-error — this is the only parity check that exists, and it is enforced by
+error. This is the only parity check that exists, and it is enforced by
 the compiler, not by a manual review step.
 
 Default language is `LANG_PT_BR`. Override without editing the file via
@@ -54,26 +54,26 @@ a build flag:
 
 ## What stays outside the language switch
 
-- **`NEWS_SOURCE_TAG`** (`config.h`, `"[GN]"`) — a fixed source
+- **`NEWS_SOURCE_TAG`** (`config.h`, `"[GN]"`): a fixed source
   abbreviation, language-independent, not translated text.
-- **Debug/serial logging** (`DEBUG_PRINT`/`DEBUG_PRINTLN` calls) — always
+- **Debug/serial logging** (`DEBUG_PRINT`/`DEBUG_PRINTLN` calls): always
   in English regardless of `APP_LANGUAGE`. These are developer-facing
   only and never reach the display.
 - **Purely numeric/unit format strings** (e.g. `"%.1fC"`, `"%.0f%%"`,
-  `"%dkm"`) — no words, nothing to translate.
+  `"%dkm"`): no words, nothing to translate.
 
 ## Constraint: no accented characters in Portuguese strings
 
 The project's display font (`FreeMonoBold9pt7b`) only covers ASCII
-0x20–0x7E — no diacritics. Any PT-BR string in `strings.h` must be
-written without accents (e.g. `"Marco"`, not `"Março"`; `"Sabado"`, not
+0x20-0x7E, no diacritics. Any PT-BR string in `strings.h` must be
+written without accents (e.g. `"Marco"`, not `"Março"`, `"Sabado"`, not
 `"Sábado"`) or the missing glyph will render garbled or blank.
 
 ## Adding a new translatable string
 
 1. Add a `#define STR_YOUR_KEY "..."` (or a `static const char* const
    STR_YOUR_ARRAY[] = {...}` for a list) to **both** blocks in
-   `include/strings.h` — same key name, one line per language.
+   `include/strings.h`, same key name, one line per language.
 2. If the PT-BR text has an accented character, write it without the
    accent.
 3. Replace the hardcoded literal in the source file with the new key,
@@ -83,7 +83,7 @@ written without accents (e.g. `"Marco"`, not `"Março"`; `"Sabado"`, not
 
 ## Adding a third language
 
-Not supported today — `strings.h` is a two-way `#if`/`#elif`/`#error`
+Not supported today. `strings.h` is a two-way `#if`/`#elif`/`#error`
 switch, and nothing else in the mechanism assumes exactly two languages.
 Adding a third would mean: a new `LANG_*` value, a third block with the
 same key set, and changing the trailing `#else` / `#error` to an
@@ -94,4 +94,4 @@ Two languages are also the reason this is a compile-time switch instead
 of a runtime lookup table: keeping every language's strings resident in
 flash/RAM at once, plus an indirection layer to select among them, only
 pays for itself once more than a small, fixed number of languages must
-coexist in the same binary — which is not the case here.
+coexist in the same binary. That is not the case here.

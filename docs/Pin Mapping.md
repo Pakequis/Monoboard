@@ -55,7 +55,7 @@ static const uint8_t PIN_MOSI = 11;
 
 | Module          | GPIO | Function                     | Notes |
 |-----------------|------|-------------------------------|-------|
-| DHT22           | 2    | Data (1-wire)                 | Needs a ~10kΩ pull-up to 3.3V — many breakout modules already include this on-board; check before wiring a bare sensor. |
+| DHT22           | 2    | Data (1-wire)                 | Needs a ~10kΩ pull-up to 3.3V, many breakout modules already include this on-board. Check before wiring a bare sensor. |
 | AS3935 breakout | 6    | IRQ, `ext1` deep-sleep wake   | The board wakes directly on this pin the instant the chip signals an event (`armAs3935IrqWakeup()`/`isWakeFromAs3935Irq()` in `as3935_lightning.cpp`), instead of only catching strikes on the next timer-driven poll. |
 | AS3935 breakout | 8    | I2C SDA (module's `MOSI` pin) | Shared I2C bus, default ESP32-S3 Arduino core pin. |
 | AS3935 breakout | 9    | I2C SCL                       | Shared I2C bus, default ESP32-S3 Arduino core pin. |
@@ -67,7 +67,7 @@ GPIO 19/20, and the strapping pins GPIO 0/3/45/46.
 
 The specific breakout in hand (silkscreen: `A1`, `A0`, `EN_V`, `IRQ`, `SI`,
 `CS`, `MISO`, `MOSI`, `SCL`, `GND`, `VCC`) ties several extra pins to fixed
-levels to put the chip in I2C mode (no on-board pull-ups on SDA/SCL —
+levels to put the chip in I2C mode (no on-board pull-ups on SDA/SCL,
 external ~4.7kΩ pull-ups to VCC are required):
 
 | Pin  | Tied to        | Purpose |
@@ -77,9 +77,9 @@ external ~4.7kΩ pull-ups to VCC are required):
 | EN_V | GND            | Regulator/interface enable |
 | SI   | VCC            | Interface select: HIGH = I2C mode, LOW = SPI mode |
 | CS   | GND            | SPI chip-select, unused in I2C mode |
-| MISO | Not connected  | SPI-only pin, unused in I2C mode — currently left floating |
+| MISO | Not connected  | SPI-only pin, unused in I2C mode, currently left floating |
 | A0   | VCC            | I2C address bit 0 |
-| A1   | VCC            | I2C address bit 1 — both A0/A1 HIGH gives I2C address `0x03` (matched explicitly in `as3935_lightning.cpp`: `SparkFun_AS3935 lightning(defAddr)`) |
+| A1   | VCC            | I2C address bit 1. Both A0/A1 HIGH gives I2C address `0x03` (matched explicitly in `as3935_lightning.cpp`: `SparkFun_AS3935 lightning(defAddr)`) |
 
 Antenna tuning capacitance (`AS3935_TUNE_CAP` in `config.h`) is `0` pF for
-this specific physical unit — re-measure if the sensor is ever swapped.
+this specific physical unit. Re-measure if the sensor is ever swapped.
