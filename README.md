@@ -10,6 +10,9 @@ I've had this Waveshare 7.5" e-paper display sitting since 2019, waiting for a p
 
 Dashboard firmware for the panel, driven by an ESP32-S3 DevKitC-1. Weather, local temperature/humidity, lightning strikes, a monthly calendar, a clock, crypto quotes and a news carousel. UI strings switch between PT-BR/EN at compile time. The board wakes from deep sleep on a timer or an AS3935 IRQ, redraws, and goes back to sleep.
 
+## Demo video:
+[![Demo Video](https://img.youtube.com/vi/RcL0SpF0Wd4/0.jpg)](https://www.youtube.com/watch?v=RcL0SpF0Wd4)
+
 ## Hardware
 
 - [ESP32-S3 DevKitC-1](https://s.click.aliexpress.com/e/_c3HgUNVP)
