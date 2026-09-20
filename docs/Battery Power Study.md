@@ -1,126 +1,127 @@
-# Estudo de Alimentação por Bateria de Lítio
+# Lithium Battery Power Study
 
-> **Nota**: primeira sessão do estudo. Objetivo: viabilizar
-> alimentar o circuito por uma bateria de Li-ion de 2500mAh, com leitura
-> de tensão da bateria pelo ADC do ESP32-S3, e estimar quantos dias a
-> bateria duraria. Discussão ainda em andamento. Este documento registra
-> o que já foi medido/decidido para continuar em outra sessão.
+> **Note**: first session of the study. Goal: make it feasible to power
+> the circuit from a 2500mAh Li-ion battery, with battery voltage read
+> via the ESP32-S3's ADC, and estimate how many days the battery would
+> last. Discussion still ongoing. This document records what has been
+> measured/decided so far, to continue in another session.
 
-## Objetivo
+## Goal
 
-1. Definir um circuito de leitura de tensão da bateria (divisor resistivo
-   num pino ADC livre).
-2. Estimar a duração de uma bateria de 2500mAh alimentando o projeto,
-   dado o padrão de wake a cada `DEEP_SLEEP_INTERVAL_SEC` (60s, ver
-   `config.h`) com sync de WiFi/NTP só quando `NTP_RESYNC_INTERVAL_MS`
-   vence (1h).
+1. Define a battery voltage reading circuit (resistive divider on a
+   free ADC pin).
+2. Estimate how long a 2500mAh battery would power the project, given
+   the wake pattern every `DEEP_SLEEP_INTERVAL_SEC` (60s, see
+   `config.h`) with WiFi/NTP sync only when `NTP_RESYNC_INTERVAL_MS`
+   is due (1h).
 
-## Contexto da placa
+## Board context
 
-- Board real: **ESP32-S3-DevKitC-1**, sem circuito de carga/BMS onboard
-  (não é um board tipo Feather/LiPo).
-- Bridge USB-serial onboard é um chip **WCH** ("USB Single Serial",
-  VID:PID `1A86:55D3`), aparece como `/dev/ttyACM0` no Linux, não é um
-  CH340 clássico, mas mesma categoria (chip separado do ESP32-S3,
-  alimentado pelo mesmo trilho de 3.3V/5V USB).
-- Pinos ADC1 livres nesta placa (evitando os já usados: display
-  4/10/11/12/16/17, sensores/botão 1/2/6/8/9, ver `Pin Mapping.md`):
-  candidatos incluem **GPIO5** (recomendado) e GPIO7. ADC2 (GPIO11-20)
-  foi descartado porque compartilha circuito com o rádio WiFi, que este
-  projeto usa ativamente antes de dormir.
+- Real board: **ESP32-S3-DevKitC-1**, no onboard charging/BMS circuit
+  (not a Feather/LiPo-style board).
+- The onboard USB-serial bridge is a **WCH** chip ("USB Single Serial",
+  VID:PID `1A86:55D3`), shows up as `/dev/ttyACM0` on Linux. Not a
+  classic CH340, but the same category (a separate chip from the
+  ESP32-S3, powered by the same 3.3V/5V USB rail).
+- Free ADC1 pins on this board (avoiding the ones already used: display
+  4/10/11/12/16/17, sensors/button 1/2/6/8/9, see `Pin Mapping.md`):
+  candidates include **GPIO5** (recommended) and GPIO7. ADC2 (GPIO11-20)
+  was ruled out because it shares circuitry with the WiFi radio, which
+  this project uses actively before sleeping.
 
-## Medições da primeira sessão
+## First session measurements
 
-### Corrente (medidor do usuário, resolução de 10mA, inline USB-C entre PC e a DevKit)
+### Current (user's meter, 10mA resolution, inline USB-C between PC and the DevKit)
 
-| Estado | Corrente |
+| State | Current |
 |---|---|
-| WiFi ligado | ~0,2 A |
-| Atualização normal (sem WiFi, a cada 60s) | ~0,03 A |
-| Deep sleep | <0,01 A (piso de resolução do medidor, não sabemos o valor real) |
+| WiFi on | ~0.2 A |
+| Normal update (no WiFi, every 60s) | ~0.03 A |
+| Deep sleep | <0.01 A (meter's resolution floor, real value unknown) |
 
-Importante: essa medição é *inline no cabo USB* (lado 5V/VBUS, antes do
-LDO onboard), então o valor de sleep já inclui LDO + chip USB-serial +
-ESP32-S3 somados. Isso descarta o cenário pessimista de 10-15mA de fuga
-só da placa (que eu tinha levantado como hipótese antes de medir), mas
-não fecha o valor exato. Ainda falta resolução abaixo de 10mA.
+Important: this measurement is *inline on the USB cable* (5V/VBUS side,
+before the onboard LDO), so the sleep value already includes the LDO +
+USB-serial chip + ESP32-S3 combined. This rules out the pessimistic
+scenario of 10-15mA of leakage from the board alone (which had been my
+hypothesis before measuring), but doesn't pin down the exact value.
+Still need resolution below 10mA.
 
-### Tempo de cada fase (instrumentação `millis()` adicionada temporariamente em `src/main.cpp` para esta medição, depois revertida)
+### Time per phase (`millis()` instrumentation temporarily added to `src/main.cpp` for this measurement, then reverted)
 
-Adicionados três prints `[TIMING]` (gated pelas macros `DEBUG_PRINTLN`
-existentes em `debug.h`, custo zero quando `APP_DEBUG_SERIAL=0`, o padrão
-de produção). Testado gravando com
-`PLATFORMIO_BUILD_FLAGS=-DAPP_DEBUG_SERIAL=1 pio run -t upload` e lendo
-`/dev/ttyACM0` via pyserial (o `pio device monitor` normal precisa de um
-TTY interativo real, que não está disponível neste ambiente de agente).
+Added three `[TIMING]` prints (gated by the existing `DEBUG_PRINTLN`
+macros in `debug.h`, zero cost when `APP_DEBUG_SERIAL=0`, the production
+default). Tested by flashing with
+`PLATFORMIO_BUILD_FLAGS=-DAPP_DEBUG_SERIAL=1 pio run -t upload` and
+reading `/dev/ttyACM0` via pyserial (the normal `pio device monitor`
+needs a real interactive TTY, not available in this agent environment).
 
-| Fase | Duração medida |
+| Phase | Measured duration |
 |---|---|
-| Wake normal, sem WiFi | **5.600 ms** |
-| Fase WiFi (conexão + NTP + fetch clima/notícias/cripto) | **10.026 ms** |
-| Wake completo com WiFi (total) | 15.626 ms (= 10.026 + 5.600, bate exato) |
-| Draw phase (refresh completo do e-paper, dentro dos 5.600ms acima) | ~5.480 ms |
+| Normal wake, no WiFi | **5,600 ms** |
+| WiFi phase (connect + NTP + weather/news/crypto fetch) | **10,026 ms** |
+| Full wake with WiFi (total) | 15,626 ms (= 10,026 + 5,600, exact match) |
+| Draw phase (full e-paper refresh, within the 5,600ms above) | ~5,480 ms |
 
-### Conta de energia ativa por hora
+### Active energy per hour
 
-Com 59 wakes normais + 1 wake com WiFi por hora, usando as correntes
-medidas pelo usuário (30mA / 200mA):
+With 59 normal wakes + 1 WiFi wake per hour, using the currents the
+user measured (30mA / 200mA):
 
-- Normal: 59 × (30mA × 5,6s / 3600) ≈ 2,76 mAh
-- WiFi: 1 × [(200mA × 10,03s/3600) + (30mA × 5,6s/3600)] ≈ 0,60 mAh
-- **Total ativo: ~3,36 mAh/hora**
+- Normal: 59 × (30mA × 5.6s / 3600) ≈ 2.76 mAh
+- WiFi: 1 × [(200mA × 10.03s/3600) + (30mA × 5.6s/3600)] ≈ 0.60 mAh
+- **Total active: ~3.36 mAh/hour**
 
-Bem mais barato do que a estimativa inicial (~10,7mAh/h, baseada em
-chutes de duração antes de medir).
+Much cheaper than the initial estimate (~10.7mAh/h, based on guessed
+durations before measuring).
 
-### Estimativa de duração da bateria (2500mAh), por hipótese de sleep
+### Battery duration estimate (2500mAh), by sleep hypothesis
 
-| Sleep (hipótese) | Total/hora | Duração |
+| Sleep (hypothesis) | Total/hour | Duration |
 |---|---|---|
-| 10mA (pior caso, limite do medidor) | ~13,3 mAh/h | ~7,8 dias |
-| 1mA (plausível pra devkit) | ~4,36 mAh/h | ~24 dias |
-| 0,5mA (bom caso) | ~3,88 mAh/h | ~27 dias |
+| 10mA (worst case, meter's limit) | ~13.3 mAh/h | ~7.8 days |
+| 1mA (plausible for the devkit) | ~4.36 mAh/h | ~24 days |
+| 0.5mA (good case) | ~3.88 mAh/h | ~27 days |
 
-O gargalo do cálculo final é só o valor real do sleep. A parte ativa já
-está fechada com números medidos.
+The bottleneck for the final calculation is just the real sleep value.
+The active part is already settled with measured numbers.
 
-## Achado extra: wakes de ruído do AS3935
+## Extra finding: AS3935 noise wakes
 
-No teste de bancada, o sensor de raios (AS3935) disparou vários wakes por
-IRQ de "disturber" (ruído, não raio confirmado), ~5-6 em ~75s, bem mais
-frequente que o wake de 60s do timer. Cada um é curto (não chega a ligar
-display/WiFi), mas se essa taxa se repetir na instalação final (a
-bancada tem bastante ruído eletromagnético de PC/monitor por perto,
-pode não representar o ambiente real), a energia somada desses wakes
-extras não está contabilizada na tabela acima. Não instrumentado ainda.
+On the bench, the lightning sensor (AS3935) fired several wakes from
+"disturber" IRQs (noise, not a confirmed strike), ~5-6 in ~75s, far more
+frequent than the 60s timer wake. Each one is short (doesn't turn on the
+display/WiFi), but if this rate repeats at the final install location
+(the bench has significant electromagnetic noise from a nearby PC or
+monitor, which may not represent the real environment), the combined
+energy of these extra wakes isn't accounted for in the table above. Not
+instrumented yet.
 
-## Discussão anterior descartada (ou não): CH340/LDO
+## Previously discarded (or not): CH340/LDO
 
-Antes de medir, consideramos modificar a placa pra desligar o
-regulador/chip USB-serial durante o sleep (via chave reversível), pra
-cortar uma fuga hipotética de vários mA. Como a medição via USB já
-mostrou que o sistema inteiro (LDO+USB-serial+ESP32-S3) fica abaixo de
-10mA em sleep, essa modificação invasiva provavelmente não é necessária
--- fica de lado a menos que o valor real do sleep (ainda não medido)
-apareça alto.
+Before measuring, we considered modifying the board to switch off the
+regulator/USB-serial chip during sleep (via a reversible switch), to cut
+a hypothetical leak of several mA. Since the USB measurement already
+showed the whole system (LDO+USB-serial+ESP32-S3) stays below 10mA in
+sleep, this invasive modification is probably not necessary. Shelved
+unless the real sleep value (not yet measured) turns out high.
 
-## Próximos passos
+## Next steps
 
-1. **Medir o sleep abaixo de 10mA**: checar se o multímetro do usuário
-   tem faixa de µA separada. Senão, método do capacitor (carrega um
-   capacitor grande, desconecta, cronometra a queda de tensão pelo
-   voltímetro) ou um módulo INA219/INA226.
-2. Instrumentar e medir a taxa/duração real dos wakes de ruído do AS3935
-   na instalação final (não só na bancada).
-3. Fechar a estimativa de dias de bateria com o valor real de sleep.
-4. Desenhar o circuito de leitura de tensão: divisor resistivo no
-   GPIO5 (ADC1), decidir se vale um MOSFET de alto lado pra cortar a
-   fuga do divisor durante o sleep, e decidir a abordagem de carregador.
+1. **Measure sleep below 10mA**: check whether the user's multimeter has
+   a separate µA range. If not, the capacitor method (charge a large
+   capacitor, disconnect, time the voltage drop with a voltmeter) or an
+   INA219/INA226 module.
+2. Instrument and measure the real rate/duration of AS3935 noise wakes
+   at the final install location (not just on the bench).
+3. Close the battery-life estimate with the real sleep value.
+4. Design the voltage-reading circuit: resistive divider on GPIO5
+   (ADC1), decide whether a high-side MOSFET is worth it to cut the
+   divider's leakage during sleep, and decide on the charger approach.
 
-## Estado do código
+## Code state
 
-A instrumentação `[TIMING]` (3 linhas de `millis()`) usada para medir as
-fases acima já foi revertida do working tree. `src/main.cpp` não tem
-mais essas linhas. Reintroduzi-la (custo zero em produção, gated pelas
-mesmas macros `DEBUG_PRINTLN`) é um passo rápido se a medição precisar
-ser reproduzida.
+The `[TIMING]` instrumentation (3 lines of `millis()`) used to measure
+the phases above has already been reverted from the working tree.
+`src/main.cpp` no longer has those lines. Reintroducing it (zero cost in
+production, gated by the same `DEBUG_PRINTLN` macros) is a quick step if
+the measurement needs to be reproduced.
