@@ -4,6 +4,8 @@
 
 # Monoboard
 
+![Monoboard dashboard, assembled and running](images/monoboard-1.JPG)
+
 I've had this Waveshare 7.5" e-paper display sitting since 2019, waiting for a project to use it for. This is that project, better late than never.
 
 Firmware project for a dashboard on the same e-paper display, driven by an ESP32-S3 DevKitC-1. There's no footer: a one-line header shows the title, WiFi status, and firmware version. Below it, a 2×2 content grid shows weather forecast + local temperature/humidity, a lightning-strike distance/rate box (AS3935), and a monthly calendar on top; a DSEG7 seven-segment clock (synced via NTP, with a BTC/ETH/USD-BRL crypto quotes box below it) and a rotating news-headline carousel on the bottom. Every display-facing string switches between PT-BR/EN at compile time (`include/strings.h`). The board wakes from deep sleep on a timer (`DEEP_SLEEP_INTERVAL_SEC`, currently `60`s, the confirmed production value) or the AS3935 lightning sensor's IRQ pin, redraws, and goes back to sleep.
@@ -15,6 +17,8 @@ Firmware project for a dashboard on the same e-paper display, driven by an ESP32
 - **Weather forecast**: Pulls 6‑hour forecast from Open‑Meteo (temperature, weather codes, day/night icons). Labels and month/weekday names are displayed in Portuguese or English per `APP_LANGUAGE`.
 - **Local sensors**: DHT22 (temperature / humidity).
 - **Lightning detection**: SparkFun AS3935 detects strikes and shows an adaptive distance scale (rings at 10/20/30/40 km, tightening to 4/6/8/10 km for a close storm), a strikes-per-hour count in the box header (sliding 1-hour window), and a 5‑entry strike history in RTC memory. The front end runs in `OUTDOOR` gain, not the chip’s `INDOOR` power-on default: at this location `INDOOR` overdrove the analog front end and real storms registered as nothing. The noise-rejection thresholds are also tightened above their permissive defaults so local electrical transients don’t register as strikes; see `docs/Lightning Detection.md`.
+
+![Lightning ring, wide 10/20/30/40 km scale, several strikes, 25/h](images/strikes-2.JPG) ![Lightning ring with an overhead strike and the alert icon lit, wide scale](images/strikes-3.JPG)
 - **Screen measurement mode**: A build-time flag (`SHOW_SCREEN_RULER`, or the `screen_ruler` PlatformIO env) replaces the dashboard with calibrated centimetre rulers on every edge plus a 10 cm calibration bar, latched on the panel for use as a 1:1 physical template; see `docs/Screen Measurement Mode.md`.
 - **Monthly calendar**: Shows the current month with weekday and month names translated.
 - **Seven‑segment clock**: DSEG7 Classic Bold font, synced via NTP; displays `HH:MM` in the bottom‑right quadrant.
@@ -35,6 +39,10 @@ Firmware project for a dashboard on the same e-paper display, driven by an ESP32
 | `docs/Lightning Detection.md` | AS3935 IRQ wake, the strikes/hour metric, noise-rejection tuning, the `as3935_monitor` diagnostic build |
 | `docs/Screen Measurement Mode.md` | `SHOW_SCREEN_RULER`: edge rulers + calibrated 10 cm bar latched on the panel as a physical template |
 | `docs/Enclosure Build.md` | Pine wood frame around the e-paper panel: piece dimensions, groove assembly |
+
+![Screen ruler pattern latched on the panel, used to fit the wood frame around it](images/wood-2.JPG)
+
+![Wiring inside the assembled frame: driver HAT, DHT22 and ESP32-S3 header](images/inside-1.JPG)
 
 ## Technologies
 
