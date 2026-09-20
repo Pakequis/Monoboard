@@ -10,6 +10,14 @@ I've had this Waveshare 7.5" e-paper display sitting since 2019, waiting for a p
 
 Dashboard firmware for the panel, driven by an ESP32-S3 DevKitC-1. Weather, local temperature/humidity, lightning strikes, a monthly calendar, a clock, crypto quotes and a news carousel, all switchable between PT-BR/EN at compile time. The board wakes from deep sleep on a timer or an AS3935 IRQ, redraws, and goes back to sleep.
 
+## Enclosure
+
+The dashboard sits in a small pine wood frame built around the e-paper panel. Piece dimensions, drawings and assembly are in `docs/Enclosure Build.md`.
+
+![Screen ruler pattern latched on the panel, used to fit the wood frame around it](images/wood-2.JPG)
+
+![Wiring inside the assembled frame: driver HAT, DHT22 and ESP32-S3 header](images/inside-1.JPG)
+
 ## Functionalities
 
 - **E‑paper display**: Waveshare 7.5″ (640 × 384 px, landscape), refreshed via `updateScreen()` in paged mode.
@@ -51,14 +59,6 @@ Confirmed via `esptool flash_id`:
 - **Chip**: ESP32-S3 (QFN56), revision v0.2, WiFi + BLE, 40MHz crystal
 - **Flash**: 16MB (Winbond, quad SPI, 3.3V)
 - **PSRAM**: 8MB embedded (octal), enabled (`board_build.arduino.memory_type = qio_opi` + `-DBOARD_HAS_PSRAM` in `platformio.ini`) and confirmed working on real hardware. The full 16MB of flash is usable via `board_build.partitions = default_16MB.csv` + `board_upload.flash_size = 16MB` in `platformio.ini`: both keys are required, since the espressif32 build script sizes the flashed image header from `board_upload.flash_size` specifically, not `board_build.flash_size`; with only the latter set, the bootloader stays capped at the board's 8MB default regardless of the partition table.
-
-## Enclosure
-
-The dashboard sits in a small pine wood frame built around the e-paper panel. Piece dimensions, drawings and assembly are in `docs/Enclosure Build.md`.
-
-![Screen ruler pattern latched on the panel, used to fit the wood frame around it](images/wood-2.JPG)
-
-![Wiring inside the assembled frame: driver HAT, DHT22 and ESP32-S3 header](images/inside-1.JPG)
 
 ## Notes
 
