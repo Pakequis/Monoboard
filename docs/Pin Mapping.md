@@ -3,6 +3,14 @@
 > Wiring reference for the ESP32-S3 DevKitC-1 board this project actually
 > builds for (`platformio.ini` only defines the `esp32-s3-devkitc-1` env).
 
+## Board (ESP32-S3 DevKitC-1)
+
+Confirmed via `esptool flash_id`:
+
+- **Chip**: ESP32-S3 (QFN56), revision v0.2, WiFi + BLE, 40MHz crystal
+- **Flash**: 16MB (Winbond, quad SPI, 3.3V)
+- **PSRAM**: 8MB embedded (octal), enabled (`board_build.arduino.memory_type = qio_opi` + `-DBOARD_HAS_PSRAM` in `platformio.ini`) and confirmed working on real hardware. The full 16MB of flash is usable via `board_build.partitions = default_16MB.csv` + `board_upload.flash_size = 16MB` in `platformio.ini`: both keys are required, since the espressif32 build script sizes the flashed image header from `board_upload.flash_size` specifically, not `board_build.flash_size`. With only the latter set, the bootloader stays capped at the board's 8MB default regardless of the partition table.
+
 ## Display: Waveshare 7.5" (GxEPD2_750)
 
 - **Resolution**: 640 x 384 pixels
