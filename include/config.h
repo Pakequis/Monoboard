@@ -182,15 +182,14 @@
 // interference saturates the AFE, the chip's automatic noise floor backs
 // off, and real sferics come through distorted enough that the
 // signal-verification stage classifies them as DISTURBER (or nothing)
-// rather than LIGHTNING. In INDOOR mode the 2026-08-31 run caught only
-// 8 strikes in ~15 h of storms and three later runs against two more
+// rather than LIGHTNING. In INDOOR mode the first diagnostic run caught
+// only 8 strikes in ~15 h of storms and three later runs against two more
 // storms with audible thunder caught ZERO between them -- one with every
 // rejection knob at minimum, one with the sensor outside its enclosure
 // -- while emitting 30-115 disturbers/min. The same board, same
 // placement, switched to OUTDOOR mid-storm registered 66 LIGHTNING
 // events in 14 minutes (km 6 -> 1 as the cell closed, energy 8k-480k)
-// with only ~1.7 disturbers/min. See docs/Lightning Detection.md, the
-// 2026-09-09 run.
+// with only ~1.7 disturbers/min. See docs/Lightning Detection.md, Run 3.
 //
 // Wrapped in #ifndef so a diagnostic build can override it (the
 // [env:as3935_monitor_outdoor] PlatformIO env forces OUTDOOR on top of
@@ -218,8 +217,8 @@
 //
 // The ceiling is 550000 -- just above the highest energy any real strike
 // has produced on this sensor in OUTDOOR mode (503121, measured over 331
-// strikes across two storms; see docs/Lightning Detection.md, the
-// 2026-09-10 run). That makes the guard nearly inert: it fires only on a
+// strikes across two storms; see docs/Lightning Detection.md, Run 4).
+// That makes the guard nearly inert: it fires only on a
 // reading past anything a genuine close strike has ever registered. It is
 // kept rather than removed as cheap insurance, because the original
 // interference signature it was built for -- a local source pinning the
@@ -360,7 +359,7 @@
 //
 // Tiers set against the measured OUTDOOR-mode distribution of 331 real
 // strikes across two storms (median ~20000, p90 ~63000, p95 ~89000, max
-// ~503000; see docs/Lightning Detection.md, the 2026-09-10 run): MEDIUM
+// ~503000; see docs/Lightning Detection.md, Run 4): MEDIUM
 // ~= the 70th percentile, HIGH ~= the 95th, so the tiers land roughly
 // 70% thin / 25% medium / 5% thick. Higher-gain (INDOOR) readings run
 // much lower, so re-tune both if the front-end gain ever changes back.

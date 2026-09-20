@@ -55,7 +55,7 @@ Confirmed via `esptool flash_id`:
 
 ## Notes
 
-1. Tuning the lightning sensor's gain took four separate thunderstorms across three weeks (2026-08-31 to 2026-09-10), because the only way to test it is to wait for an actual storm and see what the chip logs. Three storms in a row came back with zero detected strikes despite audible thunder, until the cause turned out to be a single register: the chip powers on in `INDOOR` gain, and at this location that setting saturates the front end. Switching to `OUTDOOR` mid-storm took it from zero to 66 lightning events in 14 minutes. `as3935_monitor_loose` is still sitting in `platformio.ini`, waiting for whichever storm shows up next.
+1. Tuning the lightning sensor's gain took four separate thunderstorms across three weeks, because the only way to test it is to wait for an actual storm and see what the chip logs. Three storms in a row came back with zero detected strikes despite audible thunder, until the cause turned out to be a single register: the chip powers on in `INDOOR` gain, and at this location that setting saturates the front end. Switching to `OUTDOOR` mid-storm took it from zero to 66 lightning events in 14 minutes. `as3935_monitor_loose` is still sitting in `platformio.ini`, waiting for whichever storm shows up next.
 2. The pine wood enclosure in `docs/Enclosure Build.md` came out rustic. I'm not much of a carpenter.
 
 ## Contact

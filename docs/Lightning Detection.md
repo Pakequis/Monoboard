@@ -74,17 +74,16 @@ off, and real sferics arrive distorted enough that the
 signal-verification stage classifies them as `DISTURBER` — or discards
 them entirely — instead of `LIGHTNING`.
 
-The evidence is unambiguous. In `INDOOR` mode: the 2026-08-31 run logged
-only 8 `LIGHTNING` across ~15 h of confirmed storms, and three later
-runs against two more storms with audible thunder — 2026-09-05 (every
-rejection knob at minimum, disturber mask off) and both 2026-09-09
-`INDOOR` phases (one with the sensor physically outside its wooden
-enclosure) — logged **zero** between them, while emitting a steady
-30–115 `DISTURBER`/min. The same board, same placement, switched to
-`OUTDOOR` in the middle of the 2026-09-09 storm registered **66
-`LIGHTNING` events in 14 minutes** (distance 6 km → 1 km as the cell
-closed in, energy 8k–480k) with the disturber rate collapsing to
-~1.7/min. Full numbers in the 2026-09-09 diagnostic run below.
+The evidence is unambiguous. In `INDOOR` mode: Run 1 logged only 8
+`LIGHTNING` across ~15 h of confirmed storms, and three later runs
+against two more storms with audible thunder — Run 2 (every rejection
+knob at minimum, disturber mask off) and both Run 3 `INDOOR` phases (one
+with the sensor physically outside its wooden enclosure) — logged
+**zero** between them, while emitting a steady 30–115 `DISTURBER`/min.
+The same board, same placement, switched to `OUTDOOR` in the middle of
+the Run 3 storm registered **66 `LIGHTNING` events in 14 minutes**
+(distance 6 km → 1 km as the cell closed in, energy 8k–480k) with the
+disturber rate collapsing to ~1.7/min. Full numbers in Run 3 below.
 
 `AS3935_INDOOR_OUTDOOR` is `#ifndef`-wrapped; the
 `[env:as3935_monitor_outdoor]` build forces `OUTDOOR` explicitly on top
@@ -134,10 +133,10 @@ there. `onConfirmedLightningStrike()` discards a strike at
 `AS3935_OVERHEAD_MAX_PLAUSIBLE_ENERGY`. Set the energy ceiling to `0` to
 disable the check.
 
-The ceiling is **550000** (raised from an `INDOOR`-era 200000 on
-2026-09-10). In `OUTDOOR` mode a real close strike's energy spans the
-whole 3k–505k range — 331 strikes across the 2026-09-09 and 2026-09-10
-storms, `km=1` maxing at 503121 (485678 on 2026-09-09, close agreement) —
+The ceiling is **550000** (raised from an `INDOOR`-era 200000 in Run 4).
+In `OUTDOOR` mode a real close strike's energy spans the
+whole 3k–505k range — 331 strikes across the Run 3 and Run 4
+storms, `km=1` maxing at 503121 (485678 in Run 3, close agreement) —
 so the old 200000 ceiling was discarding about 4% of real close strikes
 and the dashboard header undercounted by that much. 550000 sits just
 above the observed real-strike maximum, which makes the guard nearly
@@ -197,7 +196,7 @@ segment.
 
 ## Diagnostic runs
 
-### 2026-08-31 — real thunderstorms, count lower than expected
+### Run 1 — real thunderstorms, count lower than expected
 
 `as3935_monitor` left running ~14 h 49 min on a bare USB charger through
 an evening of confirmed thunderstorms (thunder audible, rain). Compiled
@@ -241,9 +240,9 @@ Leading hypotheses, most likely first:
    reject more borderline real strikes.
 4. Indoor placement inside the wooden enclosure attenuating the signal.
 
-### 2026-09-05 — loosened knobs, storm ~20 km, zero lightning
+### Run 2 — loosened knobs, storm ~20 km, zero lightning
 
-The re-test planned after the 2026-08-31 run: `as3935_monitor_loose`
+The re-test planned after Run 1: `as3935_monitor_loose`
 (`MIN_STRIKES=1`, `watchdog=2`, `spikeRejection=2`, disturber mask
 **off**) flashed while a thunderstorm was active ~20 km away — cells over
 Cachoeira de Minas / Brazópolis / Paraisópolis, confirmed against an
@@ -267,21 +266,21 @@ itself, at 20 km, produced **not one event the chip was willing to call
 lightning**, even with `MIN_STRIKES` at 1 and every rejection knob at its
 most permissive.
 
-This confirms and sharpens the 2026-08-31 finding: loosening the
+This confirms and sharpens the Run 1 finding: loosening the
 noise-rejection knobs does **not** recover strikes — real lightning is
 classified as `DISTURBER` (or nothing) upstream of the count, so no
 threshold change downstream can bring it back. The production config
 (`MIN_STRIKES=5`, `watchdog=3`, `spikeRejection=3`, mask on) stays as-is;
 loosening buys nothing but a flood of disturbers.
 
-> **Follow-up (2026-09-09): the cause was the front-end gain, not the
+> **Follow-up (Run 3): the cause was the front-end gain, not the
 > antenna or the thresholds.** This section concluded the fix had to be
 > "an antenna/placement problem, not a register-tuning one." Half right:
 > it was a register — `setIndoorOutdoor()`. Switching from `INDOOR` to
 > `OUTDOOR` gain, same board and placement, took the sensor from zero
-> `LIGHTNING` to 66 in 14 minutes. See the 2026-09-09 run below and the
+> `LIGHTNING` to 66 in 14 minutes. See Run 3 below and the
 > "Antenna gain: indoor vs outdoor" section. The "only registers close
-> strikes" claim was also an `INDOOR`-mode artifact: the 2026-09-09
+> strikes" claim was also an `INDOOR`-mode artifact: the Run 3
 > `OUTDOOR` run picked the cell up at 6 km and tracked it in.
 
 Note: the `==== BOOT n … mask=1 ====` header line the monitor writes to
@@ -290,7 +289,7 @@ format, not the live `AS3935_MASK_DISTURBER` value — so it reads `mask=1`
 even for the loose build, where the mask is off. The `DISTURBER` counts
 in the same segment are the real indicator of whether the mask was on.
 
-### 2026-09-09 — INDOOR→OUTDOOR gain, the fix
+### Run 3 — INDOOR→OUTDOOR gain, the fix
 
 A close storm with repeated loud thunder. The sensor was outside its
 enclosure this time, on USB with a host attached. The run went in four
@@ -303,7 +302,7 @@ phase 4 after the cell circled back):
    outlasted the chip's ~17-min window with nothing to show.)
 2. **`as3935_monitor_loose` (knobs at minimum, mask off), INDOOR** —
    ~50 min. Still `lightning=0`. `DISTURBER` climbed steadily to ~2900
-   (50–115/min), `noise` crept to 9. Same picture as 2026-09-05, now
+   (50–115/min), `noise` crept to 9. Same picture as Run 2, now
    without the enclosure as an excuse.
 3. **`as3935_monitor_outdoor` (loose knobs + `OUTDOOR` gain)** — the
    only change from phase 2 was `setIndoorOutdoor(INDOOR)` →
@@ -348,12 +347,12 @@ tightening chosen against `INDOOR` clear-sky data carries over fine.
 
 Open item at the time: the firmware overhead guard's 200000 energy
 ceiling was stale for `OUTDOOR` — 10 of the 92 phase-4 strikes read above
-it and the production firmware would have dropped them. Addressed on
-2026-09-10 (ceiling raised to 550000 after a second storm confirmed the
+it and the production firmware would have dropped them. Addressed in
+Run 4 (ceiling raised to 550000 after a second storm confirmed the
 distribution); see that run below and the "Firmware-side overhead guard"
 section.
 
-### 2026-09-10 — OUTDOOR production knobs, storm overhead, energy distribution
+### Run 4 — OUTDOOR production knobs, storm overhead, energy distribution
 
 Run to collect a real-strike energy/distance distribution under the exact
 production configuration, to calibrate the firmware energy constants
@@ -371,7 +370,7 @@ The run spans two flash-log segments — a mains power cut killed the board
 mid-storm and it rebooted when power returned (`BOOT 13` ≈ 20 min while
 the cell was overhead, `BOOT 14` ≈ 26 min of the tail as it moved off).
 Figures below combine both. The host serial capture is preserved under
-`docs/temp-storm-2026-09-10/` (gitignored); the numbers here are from the
+`docs/temp-storm-run4/` (gitignored); the numbers here are from the
 on-chip `/as3935.log`, which is complete across the power cut.
 
 | Class | Count | Notes |
@@ -400,8 +399,8 @@ Energy over all 331 `LIGHTNING` events:
 | mean | 33 845 |
 
 2.1% of all events exceed the current 200 000 overhead-guard ceiling;
-0.3% exceed 500 000. The max, 503 121, matches the 485 678 seen on
-2026-09-09 — the AS3935's `OUTDOOR` energy reading for a real strike tops
+0.3% exceed 500 000. The max, 503 121, matches the 485 678 seen in
+Run 3 — the AS3935's `OUTDOOR` energy reading for a real strike tops
 out around **505k**, and the distribution is a smooth long tail from ~3k
 with no clustering (the real-strike fingerprint).
 
@@ -414,7 +413,7 @@ with no clustering (the real-strike fingerprint).
 
 So during this storm the production firmware silently dropped about 1 in
 25 of the closest strikes, and the dashboard strikes/hour header
-undercounts by that fraction — confirming and quantifying the 2026-09-09
+undercounts by that fraction — confirming and quantifying the Run 3
 open item, now with production knobs rather than the loose build.
 
 The deeper problem: in `OUTDOOR` mode a real overhead strike's energy
@@ -430,7 +429,7 @@ catch fake overhead strikes also discards real ones.
    while still clipping a reading past anything a genuine close strike
    has ever produced. This makes the guard nearly inert — acceptable,
    since production knobs produced `disturber=0 noise=0` through two real
-   storms (this run and 2026-09-09 phase 4), i.e. no sign of the
+   storms (this run and Run 3 phase 4), i.e. no sign of the
    fake-overhead interference the guard was built for. The guard is kept
    rather than set to `0` because that interference signature was
    characterised in `INDOOR` mode and no clear-sky `OUTDOOR` baseline has

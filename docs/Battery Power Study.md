@@ -1,6 +1,6 @@
 # Estudo de Alimentação por Bateria de Lítio
 
-> **Nota (2026-08-18)**: primeira sessão do estudo. Objetivo: viabilizar
+> **Nota**: primeira sessão do estudo. Objetivo: viabilizar
 > alimentar o circuito por uma bateria de Li-ion de 2500mAh, com leitura
 > de tensão da bateria pelo ADC do ESP32-S3, e estimar quantos dias a
 > bateria duraria. Discussão ainda em andamento -- este documento registra
@@ -29,7 +29,7 @@
   foi descartado porque compartilha circuito com o rádio WiFi, que este
   projeto usa ativamente antes de dormir.
 
-## Medições de hoje (2026-08-18)
+## Medições da primeira sessão
 
 ### Corrente (medidor do usuário, resolução de 10mA, inline USB-C entre PC e a DevKit)
 
