@@ -236,11 +236,17 @@ void drawDashboard()
         strikeR = LIGHTNING_STRIKE_MIN_R;
       }
 
-      if (strikeKm < LIGHTNING_CLOSE_KM_THRESHOLD)
+      if (strikeKm < lightningRingKm[0])
       {
-        // Close enough to draw the full circle instead of a gapped arc --
-        // reads as "very close" more clearly, even if it overlaps a
-        // ring's own label.
+        // Closer than the innermost labeled ring: draw the full circle
+        // instead of a gapped arc -- reads as "very close" more clearly,
+        // and a radius this small can't reach any ring's label anyway.
+        // Compared against the active scale's own first ring rather than
+        // the fixed LIGHTNING_CLOSE_KM_THRESHOLD: that constant IS the
+        // outer ring of the close (4/6/8/10) scale, so using it here made
+        // nearly every strike in that scale take this branch and paint
+        // over the 4/6/8 labels -- a collision the wide (10/20/30/40)
+        // scale never had.
         for (int8_t offset = -thickness; offset <= thickness; offset++)
         {
           drawCircle(lightningCx, lightningCy, strikeR + offset, GxEPD_BLACK);
