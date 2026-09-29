@@ -4,6 +4,7 @@
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <string.h>
 
 bool fetchCryptoRates(float* outBtcUsd, float* outBtcBrl, float* outEthUsd, float* outEthBrl)
 {
@@ -31,7 +32,9 @@ bool fetchCryptoRates(float* outBtcUsd, float* outBtcBrl, float* outEthUsd, floa
   String payload = http.getString();
   http.end();
 
-  StaticJsonDocument<384> doc;
+  // Response is an array of {"symbol":"BTCUSDT","price":"84066.48"} objects;
+  // Binance returns prices as strings.
+  StaticJsonDocument<768> doc;
   DeserializationError err = deserializeJson(doc, payload);
 
   if (err)
@@ -41,20 +44,26 @@ bool fetchCryptoRates(float* outBtcUsd, float* outBtcBrl, float* outEthUsd, floa
     return false;
   }
 
-  JsonVariant btcUsd = doc["bitcoin"]["usd"];
-  JsonVariant btcBrl = doc["bitcoin"]["brl"];
-  JsonVariant ethUsd = doc["ethereum"]["usd"];
-  JsonVariant ethBrl = doc["ethereum"]["brl"];
+  float btcUsd = 0, btcBrl = 0, ethUsd = 0, ethBrl = 0;
+  for (JsonObject item : doc.as<JsonArray>())
+  {
+    const char* symbol = item["symbol"] | "";
+    float price = item["price"].as<float>();
+    if (strcmp(symbol, "BTCUSDT") == 0) btcUsd = price;
+    else if (strcmp(symbol, "BTCBRL") == 0) btcBrl = price;
+    else if (strcmp(symbol, "ETHUSDT") == 0) ethUsd = price;
+    else if (strcmp(symbol, "ETHBRL") == 0) ethBrl = price;
+  }
 
-  if (btcUsd.isNull() || btcBrl.isNull() || ethUsd.isNull() || ethBrl.isNull())
+  if (btcUsd <= 0 || btcBrl <= 0 || ethUsd <= 0 || ethBrl <= 0)
   {
     DEBUG_PRINTLN("fetchCryptoRates: missing price fields");
     return false;
   }
 
-  *outBtcUsd = btcUsd.as<float>();
-  *outBtcBrl = btcBrl.as<float>();
-  *outEthUsd = ethUsd.as<float>();
-  *outEthBrl = ethBrl.as<float>();
+  *outBtcUsd = btcUsd;
+  *outBtcBrl = btcBrl;
+  *outEthUsd = ethUsd;
+  *outEthBrl = ethBrl;
   return true;
 }

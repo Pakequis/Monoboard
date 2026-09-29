@@ -483,13 +483,14 @@
 #define NEWS_SOURCE_TAG         "[GN]" // language-independent abbreviation, not translated text
 
 // ===== Crypto/FX Content Type =====
-// CoinGecko's simple/price endpoint, no API key needed. One request
+// Binance's public ticker/price endpoint, no API key needed. One request
 // covers both coins and both currencies -- the USD/BRL exchange rate
 // shown alongside BTC/ETH isn't a separate fetch, it's derived from
-// these same four prices at render time (see crypto_client.h). Which
+// these same four prices at render time (see crypto_client.h). USDT is
+// treated as 1:1 with USD. Which
 // currency each price line displays in (BRL vs USD) follows APP_LANGUAGE
 // via strings.h's STR_CRYPTO_* macros, not a separate flag here.
-#define CRYPTO_API_URL           "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd,brl"
+#define CRYPTO_API_URL           "https://api.binance.com/api/v3/ticker/price?symbols=%5B%22BTCUSDT%22,%22ETHUSDT%22,%22BTCBRL%22,%22ETHBRL%22%5D"
 #define CRYPTO_HTTP_TIMEOUT_MS   8000UL
 #define CRYPTO_BTC_LABEL         "BTC" // ticker symbol, language-independent like NEWS_SOURCE_TAG above
 #define CRYPTO_ETH_LABEL         "ETH"

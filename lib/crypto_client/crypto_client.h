@@ -3,8 +3,8 @@
 
 #include <Arduino.h>
 
-// Fetches BTC and ETH spot prices in both USD and BRL from CoinGecko's
-// simple/price endpoint (one request covers both coins and both
+// Fetches BTC and ETH spot prices in both USD and BRL from Binance's
+// ticker/price endpoint (USD side is quoted in USDT, treated as 1:1) (one request covers both coins and both
 // currencies -- see CRYPTO_API_URL, config.h). There's no separate
 // USD/BRL exchange-rate fetch: either coin's BRL price divided by its own
 // USD price already is that rate (both express the same coin's value, just
